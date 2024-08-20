@@ -1,7 +1,11 @@
+pub mod permission_manager;
 use starknet::ContractAddress;
 
 #[starknet::interface]
 pub trait IToken<TContractState> {
+    fn set_permission_manager_contract_address(
+        ref self: TContractState, contract_address: ContractAddress
+    );
     fn mint(ref self: TContractState, recipient: ContractAddress, amount: u256);
     fn balance_of(ref self: TContractState, account: ContractAddress) -> u256;
     fn pause(ref self: TContractState);
@@ -18,6 +22,14 @@ mod Token {
 
     use starknet::ContractAddress;
     use starknet::get_caller_address;
+
+    use starknet_contracts::permission_manager::{
+        IPermissionManagerDispatcher, IPermissionManagerDispatcherTrait
+    };
+
+
+    const MINTER_ROLE: felt252 = selector!("MINTER_ROLE");
+    const PAUSER_ROLE: felt252 = selector!("PAUSER_ROLE");
 
     component!(path: ERC20Component, storage: erc20, event: ERC20Event);
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -39,6 +51,7 @@ mod Token {
 
     #[storage]
     struct Storage {
+        permission_manager_contract_address: ContractAddress,
         #[substorage(v0)]
         erc20: ERC20Component::Storage,
         #[substorage(v0)]
@@ -68,21 +81,37 @@ mod Token {
     }
 
     #[external(v0)]
+    fn set_permission_manager_contract_address(
+        ref self: ContractState, contract_address: ContractAddress
+    ) {
+        self.permission_manager_contract_address.write(contract_address);
+    }
+
+    fn check_address_has_role(ref self: ContractState, role: felt252, address: ContractAddress) {
+        let permission_manager_dispatcher = IPermissionManagerDispatcher {
+            contract_address: self.permission_manager_contract_address.read()
+        };
+        if !permission_manager_dispatcher.has_role(role, address) {
+            panic!("Wrong role")
+        };
+    }
+
+    #[external(v0)]
     fn mint(ref self: ContractState, recipient: ContractAddress, amount: u256) {
-        self.ownable.assert_only_owner();
+        check_address_has_role(ref self, MINTER_ROLE, get_caller_address());
         self.pausable.assert_not_paused();
         self.erc20.mint(recipient, amount);
     }
 
     #[external(v0)]
     fn pause(ref self: ContractState) {
-        self.ownable.assert_only_owner();
+        check_address_has_role(ref self, PAUSER_ROLE, get_caller_address());
         self.pausable.pause();
     }
 
     #[external(v0)]
     fn unpause(ref self: ContractState) {
-        self.ownable.assert_only_owner();
+        check_address_has_role(ref self, PAUSER_ROLE, get_caller_address());
         self.pausable.unpause();
     }
 }
