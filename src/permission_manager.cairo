@@ -1,5 +1,6 @@
 const MINTER_ROLE: felt252 = selector!("MINTER_ROLE");
 const PAUSER_ROLE: felt252 = selector!("PAUSER_ROLE");
+const BURNER_ROLE: felt252 = selector!("BURNER_ROLE");
 
 use starknet::ContractAddress;
 
@@ -15,10 +16,8 @@ pub mod PermissionManager {
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::access::accesscontrol::DEFAULT_ADMIN_ROLE;
     use openzeppelin::introspection::src5::SRC5Component;
-
     use starknet::ContractAddress;
-
-    use super::{MINTER_ROLE, PAUSER_ROLE};
+    use super::{MINTER_ROLE, PAUSER_ROLE, BURNER_ROLE};
 
     component!(path: AccessControlComponent, storage: accesscontrol, event: AccessControlEvent);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
