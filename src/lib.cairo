@@ -8,12 +8,15 @@ pub trait IToken<TContractState> {
     fn set_permission_manager_contract_address(
         ref self: TContractState, contract_address: ContractAddress
     );
+    fn set_redemption_contract_address(ref self: TContractState, contract_address: ContractAddress);
     fn mint(ref self: TContractState, recipient: ContractAddress, amount: u256);
     fn burn(ref self: TContractState, amount: u256);
     fn transfer(ref self: TContractState, recipient: ContractAddress, amount: u256);
     fn balance_of(ref self: TContractState, account: ContractAddress) -> u256;
     fn pause(ref self: TContractState);
     fn unpause(ref self: TContractState);
+    fn total_supply(ref self: TContractState) -> u256;
+    fn redeem(ref self: TContractState, amount: u256, salt: felt252);
 }
 
 #[starknet::contract]
@@ -89,6 +92,11 @@ mod Token {
         self.permission_manager_contract_address.write(contract_address);
     }
 
+    #[external(v0)]
+    fn set_redemption_contract_address(ref self: ContractState, contract_address: ContractAddress) {
+        self.redemption_contract_address.write(contract_address);
+    }
+
     fn check_address_has_role(ref self: ContractState, role: felt252, address: ContractAddress) {
         let permission_manager_dispatcher = IPermissionManagerDispatcher {
             contract_address: self.permission_manager_contract_address.read()
@@ -124,19 +132,13 @@ mod Token {
         self.pausable.unpause();
     }
 
-    fn before_update(
-        ref self: ContractState, from: ContractAddress, to: ContractAddress, amount: u256
-    ) {}
-
-    fn after_update(
-        ref self: ContractState, from: ContractAddress, to: ContractAddress, amount: u256
-    ) { // how to add salt ?
-        if (to == self.redemption_contract_address.read()) {
-            let permission_manager_dispatcher = IRedemptionDispatcher {
-                contract_address: self.permission_manager_contract_address.read()
-            };
-            permission_manager_dispatcher
-                .on_transfer_received(get_contract_address(), from, amount,);
-        }
+    #[external(v0)]
+    fn redeem(ref self: ContractState, amount: u256, salt: felt252) {
+        let redemption_contract_address = self.redemption_contract_address.read();
+        let redemption_dispatcher = IRedemptionDispatcher {
+            contract_address: redemption_contract_address
+        };
+        self.erc20.transfer(redemption_contract_address, amount);
+        redemption_dispatcher.on_redeem(get_contract_address(), get_caller_address(), amount, salt);
     }
 }

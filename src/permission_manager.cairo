@@ -1,6 +1,7 @@
 const MINTER_ROLE: felt252 = selector!("MINTER_ROLE");
 const PAUSER_ROLE: felt252 = selector!("PAUSER_ROLE");
-const BURNER_ROLE: felt252 = selector!("BURNER_ROLE");
+const BURNER_ROLE: felt252 =
+    selector!("BURNER_ROLE"); // how to best share roles with other contracts ?
 
 use starknet::ContractAddress;
 
