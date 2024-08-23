@@ -12,6 +12,8 @@ use starknet_contracts::redemption::{IRedemptionDispatcher, IRedemptionDispatche
 const MINTER_ROLE: felt252 = selector!("MINTER_ROLE");
 const PAUSER_ROLE: felt252 = selector!("PAUSER_ROLE");
 const BURNER_ROLE: felt252 = selector!("BURNER_ROLE");
+const WHITELISTER_ROLE: felt252 = selector!("WHITELISTER_ROLE");
+const WHITELISTED_ROLE: felt252 = selector!("WHITELISTED_ROLE");
 
 const MINT_AMOUNT: u256 = 3;
 const REDEMPTION_SALT: felt252 = 0;
@@ -46,7 +48,8 @@ fn setup_redemption_contract() -> (IRedemptionDispatcher, ContractAddress, Contr
 }
 
 #[test]
-fn minter_can_mint_token() {
+fn minter_whitelisted_by_whitelister_can_mint_token() {
+    // deploy contracts
     let (token_contract_dispatcher, token_contract_address, _token_contract_owner_address) =
         setup_token_contract();
     let (
@@ -56,18 +59,28 @@ fn minter_can_mint_token() {
     ) =
         setup_permission_manager_contract();
 
+    // set contract address
     token_contract_dispatcher
         .set_permission_manager_contract_address(permission_manager_contract_address);
 
     let minter_address: ContractAddress = 002.try_into().unwrap();
     let receiver_address: ContractAddress = 003.try_into().unwrap();
+    let whitelister_address: ContractAddress = 004.try_into().unwrap();
 
+    // grant minter / whitelister roles
     start_cheat_caller_address(
         permission_manager_contract_address, permission_manager_contract_admin_address
     );
     permission_manager_contract_dispatcher.grant_role(MINTER_ROLE, minter_address);
+    permission_manager_contract_dispatcher.grant_role(WHITELISTER_ROLE, whitelister_address);
     stop_cheat_caller_address(permission_manager_contract_address);
 
+    // grant whitelisted role from whitelister
+    start_cheat_caller_address(permission_manager_contract_address, whitelister_address);
+    permission_manager_contract_dispatcher.grant_role(WHITELISTED_ROLE, receiver_address);
+    stop_cheat_caller_address(permission_manager_contract_address);
+
+    // mint tokens
     start_cheat_caller_address(token_contract_address, minter_address);
     token_contract_dispatcher.mint(receiver_address, MINT_AMOUNT);
     stop_cheat_caller_address(token_contract_address);
@@ -80,6 +93,7 @@ fn minter_can_mint_token() {
 #[should_panic]
 #[test]
 fn non_minter_can_not_mint_token() {
+    // deploy contracts
     let (token_contract_dispatcher, token_contract_address, _token_contract_owner_address) =
         setup_token_contract();
     let (
@@ -88,10 +102,15 @@ fn non_minter_can_not_mint_token() {
         _permission_manager_contract_admin_address
     ) =
         setup_permission_manager_contract();
+
+    // set permission manager contract address
     token_contract_dispatcher
         .set_permission_manager_contract_address(permission_manager_contract_address);
+
     let minter_address: ContractAddress = 002.try_into().unwrap();
     let receiver_address: ContractAddress = 003.try_into().unwrap();
+
+    // mint tokens
     start_cheat_caller_address(token_contract_address, minter_address);
     token_contract_dispatcher.mint(receiver_address, MINT_AMOUNT);
     stop_cheat_caller_address(token_contract_address);
@@ -99,6 +118,7 @@ fn non_minter_can_not_mint_token() {
 
 #[test]
 fn pauser_can_pause_token() {
+    // deploy contracts
     let (token_contract_dispatcher, token_contract_address, _token_contract_owner_address) =
         setup_token_contract();
     let (
@@ -107,15 +127,21 @@ fn pauser_can_pause_token() {
         permission_manager_contract_admin_address
     ) =
         setup_permission_manager_contract();
+
+    // set permission manager contract address
     token_contract_dispatcher
         .set_permission_manager_contract_address(permission_manager_contract_address);
+
     let pauser_address: ContractAddress = 002.try_into().unwrap();
+
+    // grant pauser role
     start_cheat_caller_address(
         permission_manager_contract_address, permission_manager_contract_admin_address
     );
     permission_manager_contract_dispatcher.grant_role(PAUSER_ROLE, pauser_address);
     stop_cheat_caller_address(permission_manager_contract_address);
 
+    // pause contract
     start_cheat_caller_address(token_contract_address, pauser_address);
     token_contract_dispatcher.pause();
     stop_cheat_caller_address(token_contract_address);
@@ -124,6 +150,7 @@ fn pauser_can_pause_token() {
 #[should_panic]
 #[test]
 fn non_pauser_can_not_pause_token() {
+    // deploy contracts
     let (token_contract_dispatcher, token_contract_address, _token_contract_owner_address) =
         setup_token_contract();
     let (
@@ -133,11 +160,13 @@ fn non_pauser_can_not_pause_token() {
     ) =
         setup_permission_manager_contract();
 
+    // set permission manager contract address
     token_contract_dispatcher
         .set_permission_manager_contract_address(permission_manager_contract_address);
 
     let pauser_address: ContractAddress = 002.try_into().unwrap();
 
+    // pause contract
     start_cheat_caller_address(token_contract_address, pauser_address);
     token_contract_dispatcher.pause();
     stop_cheat_caller_address(token_contract_address);
@@ -216,6 +245,11 @@ fn minter_can_redeem_with_redemption_executed() {
     );
     permission_manager_contract_dispatcher.grant_role(MINTER_ROLE, minter_address);
     permission_manager_contract_dispatcher.grant_role(BURNER_ROLE, redemption_contract_address);
+    permission_manager_contract_dispatcher
+        .grant_role(WHITELISTER_ROLE, permission_manager_contract_admin_address);
+    permission_manager_contract_dispatcher
+        .grant_role(WHITELISTED_ROLE, redemption_contract_address);
+    permission_manager_contract_dispatcher.grant_role(WHITELISTED_ROLE, receiver_address);
     stop_cheat_caller_address(permission_manager_contract_address);
 
     // mint tokens + check tokens have been minted
@@ -278,7 +312,11 @@ fn minter_can_redeem_with_redemption_canceled() {
         permission_manager_contract_address, permission_manager_contract_admin_address
     );
     permission_manager_contract_dispatcher.grant_role(MINTER_ROLE, minter_address);
-    permission_manager_contract_dispatcher.grant_role(BURNER_ROLE, redemption_contract_address);
+    permission_manager_contract_dispatcher
+        .grant_role(WHITELISTER_ROLE, permission_manager_contract_admin_address);
+    permission_manager_contract_dispatcher
+        .grant_role(WHITELISTED_ROLE, redemption_contract_address);
+    permission_manager_contract_dispatcher.grant_role(WHITELISTED_ROLE, receiver_address);
     stop_cheat_caller_address(permission_manager_contract_address);
 
     // mint tokens + check tokens have been minted

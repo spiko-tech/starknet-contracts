@@ -1,8 +1,3 @@
-const MINTER_ROLE: felt252 = selector!("MINTER_ROLE");
-const PAUSER_ROLE: felt252 = selector!("PAUSER_ROLE");
-const BURNER_ROLE: felt252 =
-    selector!("BURNER_ROLE"); // how to best share roles with other contracts ?
-
 use starknet::ContractAddress;
 
 #[starknet::interface]
@@ -13,12 +8,15 @@ pub trait IPermissionManager<TContractState> {
 
 #[starknet::contract]
 pub mod PermissionManager {
+    use AccessControlComponent::InternalTrait;
     use openzeppelin_access::accesscontrol::interface::IAccessControl;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::access::accesscontrol::DEFAULT_ADMIN_ROLE;
     use openzeppelin::introspection::src5::SRC5Component;
     use starknet::ContractAddress;
-    use super::{MINTER_ROLE, PAUSER_ROLE, BURNER_ROLE};
+
+    const WHITELISTER_ROLE: felt252 = selector!("WHITELISTER_ROLE");
+    const WHITELISTED_ROLE: felt252 = selector!("WHITELISTED_ROLE");
 
     component!(path: AccessControlComponent, storage: accesscontrol, event: AccessControlEvent);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
@@ -54,5 +52,6 @@ pub mod PermissionManager {
     fn constructor(ref self: ContractState, admin: ContractAddress) {
         self.accesscontrol.initializer();
         self.accesscontrol._grant_role(DEFAULT_ADMIN_ROLE, admin);
+        self.accesscontrol.set_role_admin(WHITELISTED_ROLE, WHITELISTER_ROLE);
     }
 }

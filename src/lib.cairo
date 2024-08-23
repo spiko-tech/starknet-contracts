@@ -22,7 +22,7 @@ pub trait IToken<TContractState> {
 #[starknet::contract]
 mod Token {
     use OwnableComponent::InternalTrait;
-    use openzeppelin::token::erc20::{ERC20Component, ERC20HooksEmptyImpl};
+    use openzeppelin::token::erc20::{ERC20Component};
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::security::PausableComponent;
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
@@ -34,6 +34,8 @@ mod Token {
     const MINTER_ROLE: felt252 = selector!("MINTER_ROLE");
     const PAUSER_ROLE: felt252 = selector!("PAUSER_ROLE");
     const BURNER_ROLE: felt252 = selector!("BURNER_ROLE");
+    const WHITELISTER_ROLE: felt252 = selector!("WHITELISTER_ROLE");
+    const WHITELISTED_ROLE: felt252 = selector!("WHITELISTED_ROLE");
 
     component!(path: ERC20Component, storage: erc20, event: ERC20Event);
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -140,5 +142,32 @@ mod Token {
         };
         self.erc20.transfer(redemption_contract_address, amount);
         redemption_dispatcher.on_redeem(get_contract_address(), get_caller_address(), amount, salt);
+    }
+
+    impl ERC20HooksImpl of ERC20Component::ERC20HooksTrait<ContractState> {
+        fn before_update(
+            ref self: ERC20Component::ComponentState<ContractState>,
+            from: ContractAddress,
+            recipient: ContractAddress,
+            amount: u256
+        ) {
+            let mut contract_state = ERC20Component::HasComponent::get_contract_mut(ref self);
+            if from.into() != 0 // mint
+                && !(from
+                    .into() == contract_state
+                    .redemption_contract_address
+                    .read() // burn from redemption contract
+                    && recipient.into() == 0) {
+                check_address_has_role(ref contract_state, WHITELISTED_ROLE, from);
+                check_address_has_role(ref contract_state, WHITELISTED_ROLE, recipient);
+            }
+        }
+
+        fn after_update(
+            ref self: ERC20Component::ComponentState<ContractState>,
+            from: ContractAddress,
+            recipient: ContractAddress,
+            amount: u256
+        ) {}
     }
 }
