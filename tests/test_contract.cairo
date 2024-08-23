@@ -50,7 +50,7 @@ fn setup_redemption_contract() -> (IRedemptionDispatcher, ContractAddress, Contr
 #[test]
 fn minter_whitelisted_by_whitelister_can_mint_token() {
     // deploy contracts
-    let (token_contract_dispatcher, token_contract_address, _token_contract_owner_address) =
+    let (token_contract_dispatcher, token_contract_address, token_contract_owner_address) =
         setup_token_contract();
     let (
         permission_manager_contract_dispatcher,
@@ -60,8 +60,10 @@ fn minter_whitelisted_by_whitelister_can_mint_token() {
         setup_permission_manager_contract();
 
     // set contract address
+    start_cheat_caller_address(token_contract_address, token_contract_owner_address);
     token_contract_dispatcher
         .set_permission_manager_contract_address(permission_manager_contract_address);
+    stop_cheat_caller_address(token_contract_address);
 
     let minter_address: ContractAddress = 002.try_into().unwrap();
     let receiver_address: ContractAddress = 003.try_into().unwrap();
@@ -94,7 +96,7 @@ fn minter_whitelisted_by_whitelister_can_mint_token() {
 #[test]
 fn non_minter_can_not_mint_token() {
     // deploy contracts
-    let (token_contract_dispatcher, token_contract_address, _token_contract_owner_address) =
+    let (token_contract_dispatcher, token_contract_address, token_contract_owner_address) =
         setup_token_contract();
     let (
         _permission_manager_contract_dispatcher,
@@ -104,8 +106,10 @@ fn non_minter_can_not_mint_token() {
         setup_permission_manager_contract();
 
     // set permission manager contract address
+    start_cheat_caller_address(token_contract_address, token_contract_owner_address);
     token_contract_dispatcher
         .set_permission_manager_contract_address(permission_manager_contract_address);
+    stop_cheat_caller_address(token_contract_address);
 
     let minter_address: ContractAddress = 002.try_into().unwrap();
     let receiver_address: ContractAddress = 003.try_into().unwrap();
@@ -119,7 +123,7 @@ fn non_minter_can_not_mint_token() {
 #[test]
 fn pauser_can_pause_token() {
     // deploy contracts
-    let (token_contract_dispatcher, token_contract_address, _token_contract_owner_address) =
+    let (token_contract_dispatcher, token_contract_address, token_contract_owner_address) =
         setup_token_contract();
     let (
         permission_manager_contract_dispatcher,
@@ -129,8 +133,10 @@ fn pauser_can_pause_token() {
         setup_permission_manager_contract();
 
     // set permission manager contract address
+    start_cheat_caller_address(token_contract_address, token_contract_owner_address);
     token_contract_dispatcher
         .set_permission_manager_contract_address(permission_manager_contract_address);
+    stop_cheat_caller_address(token_contract_address);
 
     let pauser_address: ContractAddress = 002.try_into().unwrap();
 
@@ -151,7 +157,7 @@ fn pauser_can_pause_token() {
 #[test]
 fn non_pauser_can_not_pause_token() {
     // deploy contracts
-    let (token_contract_dispatcher, token_contract_address, _token_contract_owner_address) =
+    let (token_contract_dispatcher, token_contract_address, token_contract_owner_address) =
         setup_token_contract();
     let (
         _permission_manager_contract_dispatcher,
@@ -161,8 +167,10 @@ fn non_pauser_can_not_pause_token() {
         setup_permission_manager_contract();
 
     // set permission manager contract address
+    start_cheat_caller_address(token_contract_address, token_contract_owner_address);
     token_contract_dispatcher
         .set_permission_manager_contract_address(permission_manager_contract_address);
+    stop_cheat_caller_address(token_contract_address);
 
     let pauser_address: ContractAddress = 002.try_into().unwrap();
 
@@ -176,7 +184,7 @@ fn non_pauser_can_not_pause_token() {
 #[test]
 fn minter_can_not_mint_token_if_paused() {
     // deploy contracts
-    let (token_contract_dispatcher, token_contract_address, _token_contract_owner_address) =
+    let (token_contract_dispatcher, token_contract_address, token_contract_owner_address) =
         setup_token_contract();
     let (
         permission_manager_contract_dispatcher,
@@ -186,8 +194,10 @@ fn minter_can_not_mint_token_if_paused() {
         setup_permission_manager_contract();
 
     // set permission manager contract address
+    start_cheat_caller_address(token_contract_address, token_contract_owner_address);
     token_contract_dispatcher
         .set_permission_manager_contract_address(permission_manager_contract_address);
+    stop_cheat_caller_address(token_contract_address);
 
     let minter_address: ContractAddress = 002.try_into().unwrap();
     let receiver_address: ContractAddress = 003.try_into().unwrap();
@@ -215,7 +225,7 @@ fn minter_can_not_mint_token_if_paused() {
 #[test]
 fn minter_can_redeem_with_redemption_executed() {
     // deploy contracts
-    let (token_contract_dispatcher, token_contract_address, _token_contract_owner_address) =
+    let (token_contract_dispatcher, token_contract_address, token_contract_owner_address) =
         setup_token_contract();
     let (
         permission_manager_contract_dispatcher,
@@ -231,10 +241,14 @@ fn minter_can_redeem_with_redemption_executed() {
         setup_redemption_contract();
 
     // set redemption / permission manager contract addresses
+    start_cheat_caller_address(token_contract_address, token_contract_owner_address);
     token_contract_dispatcher
         .set_permission_manager_contract_address(permission_manager_contract_address);
     token_contract_dispatcher.set_redemption_contract_address(redemption_contract_address);
+    stop_cheat_caller_address(token_contract_address);
+    start_cheat_caller_address(redemption_contract_address, redemption_contract_owner_address);
     redemption_contract_dispatcher.set_token_contract_address(token_contract_address);
+    stop_cheat_caller_address(redemption_contract_address);
 
     let minter_address: ContractAddress = 002.try_into().unwrap();
     let receiver_address: ContractAddress = 003.try_into().unwrap();
@@ -283,7 +297,7 @@ fn minter_can_redeem_with_redemption_executed() {
 #[test]
 fn minter_can_redeem_with_redemption_canceled() {
     // deploy contracts
-    let (token_contract_dispatcher, token_contract_address, _token_contract_owner_address) =
+    let (token_contract_dispatcher, token_contract_address, token_contract_owner_address) =
         setup_token_contract();
     let (
         permission_manager_contract_dispatcher,
@@ -299,10 +313,14 @@ fn minter_can_redeem_with_redemption_canceled() {
         setup_redemption_contract();
 
     // set redemption / permission manager contract addresses
+    start_cheat_caller_address(token_contract_address, token_contract_owner_address);
     token_contract_dispatcher
         .set_permission_manager_contract_address(permission_manager_contract_address);
     token_contract_dispatcher.set_redemption_contract_address(redemption_contract_address);
+    stop_cheat_caller_address(token_contract_address);
+    start_cheat_caller_address(redemption_contract_address, redemption_contract_owner_address);
     redemption_contract_dispatcher.set_token_contract_address(token_contract_address);
+    stop_cheat_caller_address(redemption_contract_address);
 
     let minter_address: ContractAddress = 002.try_into().unwrap();
     let receiver_address: ContractAddress = 003.try_into().unwrap();

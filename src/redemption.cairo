@@ -86,6 +86,7 @@ mod Redemption {
 
     #[external(v0)]
     fn set_token_contract_address(ref self: ContractState, contract_address: ContractAddress) {
+        self.ownable.assert_only_owner();
         self.token_contract_address.write(contract_address);
     }
 

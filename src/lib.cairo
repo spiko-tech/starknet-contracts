@@ -91,11 +91,13 @@ mod Token {
     fn set_permission_manager_contract_address(
         ref self: ContractState, contract_address: ContractAddress
     ) {
+        self.ownable.assert_only_owner();
         self.permission_manager_contract_address.write(contract_address);
     }
 
     #[external(v0)]
     fn set_redemption_contract_address(ref self: ContractState, contract_address: ContractAddress) {
+        self.ownable.assert_only_owner();
         self.redemption_contract_address.write(contract_address);
     }
 
