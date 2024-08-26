@@ -55,6 +55,18 @@ fn setup_redemption_contract() -> (IRedemptionDispatcher, ContractAddress, Contr
 }
 
 #[test]
+fn can_set_name_symbol_and_decimals() {
+    let (token_contract_dispatcher, _token_contract_address, _token_contract_owner_address) =
+        setup_token_contract();
+    let token_name = token_contract_dispatcher.name();
+    let token_symbol = token_contract_dispatcher.symbol();
+    let token_decimals = token_contract_dispatcher.decimals();
+    assert(token_name == "MyToken", 'Wrong token name');
+    assert(token_symbol == "MTK", 'Wrong token symbol');
+    assert(token_decimals == 5, 'Wrong token decimals');
+}
+
+#[test]
 fn minter_whitelisted_by_whitelister_can_mint_token() {
     // deploy contracts
     let (token_contract_dispatcher, token_contract_address, token_contract_owner_address) =

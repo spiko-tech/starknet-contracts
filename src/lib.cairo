@@ -17,6 +17,9 @@ pub trait IToken<TContractState> {
     fn unpause(ref self: TContractState);
     fn total_supply(ref self: TContractState) -> u256;
     fn redeem(ref self: TContractState, amount: u256, salt: felt252);
+    fn name(self: @TContractState) -> ByteArray;
+    fn symbol(self: @TContractState) -> ByteArray;
+    fn decimals(self: @TContractState) -> u8;
 }
 
 #[starknet::contract]
