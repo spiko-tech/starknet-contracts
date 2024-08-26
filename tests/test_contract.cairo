@@ -2,6 +2,7 @@ use starknet::ContractAddress;
 use snforge_std::{
     declare, ContractClassTrait, test_address, start_cheat_caller_address, stop_cheat_caller_address
 };
+use openzeppelin::utils::serde::SerializedAppend;
 
 use starknet_contracts::{ITokenDispatcher, ITokenDispatcherTrait};
 use starknet_contracts::permission_manager::{
@@ -33,6 +34,12 @@ fn setup_token_contract() -> (ITokenDispatcher, ContractAddress, ContractAddress
     let contract_owner_address: ContractAddress = 001.try_into().unwrap();
     let contract = declare("Token").unwrap();
     let mut constructor_calldata: Array::<felt252> = array![contract_owner_address.into()];
+    let token_name: ByteArray = "MyToken";
+    let token_symbol: ByteArray = "MTK";
+    let decimals: u8 = 5;
+    constructor_calldata.append_serde(token_name);
+    constructor_calldata.append_serde(token_symbol);
+    constructor_calldata.append_serde(decimals);
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
     let dispatcher = ITokenDispatcher { contract_address };
     (dispatcher, contract_address, contract_owner_address)

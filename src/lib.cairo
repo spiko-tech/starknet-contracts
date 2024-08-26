@@ -23,6 +23,7 @@ pub trait IToken<TContractState> {
 mod Token {
     use OwnableComponent::InternalTrait;
     use openzeppelin::token::erc20::{ERC20Component};
+    use openzeppelin::token::erc20::interface::IERC20Metadata;
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::security::PausableComponent;
     use starknet::{ContractAddress, get_caller_address, get_contract_address};
@@ -41,10 +42,8 @@ mod Token {
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
     component!(path: PausableComponent, storage: pausable, event: PausableEvent);
 
-
-    // ERC20 Mixin
     #[abi(embed_v0)]
-    impl ERC20MixinImpl = ERC20Component::ERC20MixinImpl<ContractState>;
+    impl ERC20Impl = ERC20Component::ERC20Impl<ContractState>;
     impl ERC20InternalImpl = ERC20Component::InternalImpl<ContractState>;
 
     #[abi(embed_v0)]
@@ -59,6 +58,7 @@ mod Token {
     struct Storage {
         permission_manager_contract_address: ContractAddress,
         redemption_contract_address: ContractAddress,
+        decimals: u8,
         #[substorage(v0)]
         erc20: ERC20Component::Storage,
         #[substorage(v0)]
@@ -79,10 +79,14 @@ mod Token {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, owner: ContractAddress) {
-        let name = "Token";
-        let symbol = "TK";
-
+    fn constructor(
+        ref self: ContractState,
+        owner: ContractAddress,
+        name: ByteArray,
+        symbol: ByteArray,
+        decimals: u8
+    ) {
+        _set_decimals(ref self, decimals);
         self.erc20.initializer(name, symbol);
         self.ownable.initializer(owner);
     }
@@ -171,5 +175,24 @@ mod Token {
             recipient: ContractAddress,
             amount: u256
         ) {}
+    }
+
+    #[abi(embed_v0)]
+    impl ERC20MetadataImpl of IERC20Metadata<ContractState> {
+        fn name(self: @ContractState) -> ByteArray {
+            self.erc20.name()
+        }
+
+        fn symbol(self: @ContractState) -> ByteArray {
+            self.erc20.symbol()
+        }
+
+        fn decimals(self: @ContractState) -> u8 {
+            self.decimals.read()
+        }
+    }
+
+    fn _set_decimals(ref self: ContractState, decimals: u8) {
+        self.decimals.write(decimals);
     }
 }
