@@ -9,7 +9,7 @@ pub trait IPermissionManager<TContractState> {
 #[starknet::contract]
 pub mod PermissionManager {
     use AccessControlComponent::InternalTrait;
-    use openzeppelin_access::accesscontrol::interface::IAccessControl;
+    use openzeppelin::access::accesscontrol::interface::IAccessControl;
     use openzeppelin::access::accesscontrol::AccessControlComponent;
     use openzeppelin::access::accesscontrol::DEFAULT_ADMIN_ROLE;
     use openzeppelin::introspection::src5::SRC5Component;
