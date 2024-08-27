@@ -2,3 +2,4 @@ target
 .snfoundry_cache/
 .snfoundry_cache/
 **/*~
+snfoundry.toml
