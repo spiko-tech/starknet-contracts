@@ -55,7 +55,6 @@ mod Redemption {
     use core::dict::Felt252Dict;
     use core::pedersen::PedersenTrait;
     use core::hash::{HashStateTrait, HashStateExTrait};
-    use starknet::storage::Map;
     use starknet_contracts::{ITokenDispatcher, ITokenDispatcherTrait};
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -67,7 +66,7 @@ mod Redemption {
     #[storage]
     struct Storage {
         token_contract_address: ContractAddress,
-        redemption_details: Map::<felt252, super::RedemptionDetails>,
+        redemption_details: LegacyMap::<felt252, super::RedemptionDetails>,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
     }
