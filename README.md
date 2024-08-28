@@ -37,7 +37,8 @@ by creating a local `snfoundry.toml` file.
 Then, declare each contract as follows:
 
 ```bash
-sncast --profile <YOUR_SNFOUNDRY_PROFILE> declare --package starknet_contracts --contract-name <CONTRACT_NAME> --fee-token strk
+sncast --profile <YOUR_SNFOUNDRY_PROFILE> declare --package starknet_contracts
+--contract-name <CONTRACT_NAME> --fee-token strk
 ```
 
 Once a contract is declared, use its [class
@@ -45,7 +46,8 @@ hash](https://docs.starknet.io/quick-start/declare-a-smart-contract/#expected_re
 to deploy the contract:
 
 ```bash
-sncast --profile <YOUR_SNFOUNDRY_PROFILE> deploy --class-hash <CONTRACT_CLASS_HASH> --fee-token strk --constructor-calldata <CONSTRUCTOR_CALLDATA>
+sncast --profile <YOUR_SNFOUNDRY_PROFILE> deploy --class-hash <CONTRACT_CLASS_HASH>
+--fee-token strk --constructor-calldata <CONSTRUCTOR_CALLDATA>
 ```
 
 Constructor data needs to be serialized as [explained in the Starknet
@@ -62,7 +64,6 @@ The [converter from
 Stark-utils](https://stark-utils.vercel.app/converter) might come in
 handy.
 
-
 ## Interact
 
 The functions exposed by the contract can be interacted with as
@@ -70,5 +71,6 @@ follows - with the calldata serialization built in the same way as
 above:
 
 ```bash
- sncast --profile account1 invoke --contract-address <CONTRACT_ADDRESS> --function "<FUNCTION_NAME>" --calldata <FUNCTION_CALLDATA> --fee-token strk
+ sncast --profile account1 invoke --contract-address <CONTRACT_ADDRESS>
+ --function "<FUNCTION_NAME>" --calldata <FUNCTION_CALLDATA> --fee-token strk
  ```
