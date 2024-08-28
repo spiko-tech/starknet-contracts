@@ -51,7 +51,7 @@ pub trait IRedemption<TContractState> {
 mod Redemption {
     use OwnableComponent::InternalTrait;
     use openzeppelin::access::ownable::OwnableComponent;
-    use starknet::{ContractAddress, get_block_timestamp};
+    use starknet::{ContractAddress, get_block_timestamp, get_caller_address};
     use core::dict::Felt252Dict;
     use core::pedersen::PedersenTrait;
     use core::hash::{HashStateTrait, HashStateExTrait};
@@ -104,6 +104,7 @@ mod Redemption {
         amount: u256,
         salt: felt252
     ) {
+        assert(get_caller_address() == self.token_contract_address.read(), 'Caller is not token contract');
         let redemption_data_hash: felt252 = hash_redemption_data(token, from, amount, salt);
         let redemption_details = super::RedemptionDetails {
             status: super::RedemptionStatus::Pending, deadline: get_block_timestamp()
