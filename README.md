@@ -1,5 +1,7 @@
 # Spiko Starknet Contracts
 
+![lint and test](https://github.com/spiko-tech/starknet-contracts/actions/workflows/test.yml/badge.svg)
+
 ## Build
 
 Install [Scarb](https://docs.swmansion.com/scarb/) (NOTE: it is
