@@ -1,26 +1,5 @@
 use starknet::{ContractAddress};
 
-#[derive(Drop, Hash)]
-struct RedemptionData {
-    token: ContractAddress,
-    from: ContractAddress,
-    amount: u256,
-}
-
-#[derive(Copy, Drop, Serde, starknet::Store)]
-enum RedemptionStatus {
-    Null,
-    Pending,
-    Executed,
-    Canceled
-}
-
-#[derive(Copy, Drop, Serde, starknet::Store)]
-struct RedemptionDetails {
-    status: RedemptionStatus,
-    deadline: u64,
-}
-
 #[starknet::interface]
 pub trait IRedemption<TContractState> {
     fn on_redeem(
@@ -63,17 +42,62 @@ mod Redemption {
     impl OwnableMixinImpl = OwnableComponent::OwnableMixinImpl<ContractState>;
     impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
 
+    #[derive(Copy, Drop, Serde, starknet::Store)]
+    enum RedemptionStatus {
+        Null,
+        Pending,
+        Executed,
+        Canceled
+    }
+
+    #[derive(Copy, Drop, Serde, starknet::Store)]
+    struct RedemptionDetails {
+        status: RedemptionStatus,
+        deadline: u64,
+    }
+
     #[storage]
     struct Storage {
         token_contract_address: ContractAddress,
-        redemption_details: LegacyMap::<felt252, super::RedemptionDetails>,
+        redemption_details: LegacyMap::<felt252, RedemptionDetails>,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
+    }
+
+    #[derive(Drop, Hash, Serde, starknet::Event)]
+    struct RedemptionData {
+        token: ContractAddress,
+        from: ContractAddress,
+        amount: u256,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct RedemptionInitiated {
+        #[key]
+        hash: felt252,
+        data: RedemptionData
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct RedemptionExecuted {
+        #[key]
+        hash: felt252,
+        data: RedemptionData
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct RedemptionCanceled {
+        #[key]
+        hash: felt252,
+        data: RedemptionData
     }
 
     #[event]
     #[derive(Drop, starknet::Event)]
     enum Event {
+        RedemptionInitiated: RedemptionInitiated,
+        RedemptionExecuted: RedemptionExecuted,
+        RedemptionCanceled: RedemptionCanceled,
         #[flat]
         OwnableEvent: OwnableComponent::Event
     }
@@ -92,7 +116,7 @@ mod Redemption {
     fn hash_redemption_data(
         token: ContractAddress, from: ContractAddress, amount: u256, salt: felt252
     ) -> felt252 {
-        let redemption_data = super::RedemptionData { token, from, amount };
+        let redemption_data = RedemptionData { token, from, amount };
         PedersenTrait::new(salt).update_with(redemption_data).finalize()
     }
 
@@ -109,10 +133,16 @@ mod Redemption {
             'Caller is not token contract'
         );
         let redemption_data_hash: felt252 = hash_redemption_data(token, from, amount, salt);
-        let redemption_details = super::RedemptionDetails {
-            status: super::RedemptionStatus::Pending, deadline: get_block_timestamp()
+        let redemption_details = RedemptionDetails {
+            status: RedemptionStatus::Pending, deadline: get_block_timestamp()
         };
         self.redemption_details.write(redemption_data_hash, redemption_details);
+        self
+            .emit(
+                RedemptionInitiated {
+                    hash: redemption_data_hash, data: RedemptionData { token, from, amount }
+                }
+            );
     }
 
     #[external(v0)]
@@ -130,8 +160,14 @@ mod Redemption {
             .read(redemption_data_hash); // does read panic if data is not there ?
         let dispatcher = ITokenDispatcher { contract_address: self.token_contract_address.read() };
         dispatcher.burn(amount);
-        redemption_data.status = super::RedemptionStatus::Executed;
+        redemption_data.status = RedemptionStatus::Executed;
         self.redemption_details.write(redemption_data_hash, redemption_data);
+        self
+            .emit(
+                RedemptionExecuted {
+                    hash: redemption_data_hash, data: RedemptionData { token, from, amount }
+                }
+            );
     }
 
     #[external(v0)]
@@ -147,7 +183,13 @@ mod Redemption {
         let mut redemption_data = self.redemption_details.read(redemption_data_hash);
         let dispatcher = ITokenDispatcher { contract_address: self.token_contract_address.read() };
         dispatcher.transfer(from, amount);
-        redemption_data.status = super::RedemptionStatus::Canceled;
+        redemption_data.status = RedemptionStatus::Canceled;
         self.redemption_details.write(redemption_data_hash, redemption_data);
+        self
+            .emit(
+                RedemptionCanceled {
+                    hash: redemption_data_hash, data: RedemptionData { token, from, amount }
+                }
+            );
     }
 }
