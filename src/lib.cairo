@@ -29,7 +29,9 @@ mod Token {
     use openzeppelin::token::erc20::interface::IERC20Metadata;
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::security::PausableComponent;
-    use starknet::{ContractAddress, get_caller_address, get_contract_address};
+    use openzeppelin::upgrades::UpgradeableComponent;
+    use openzeppelin::upgrades::interface::IUpgradeable;
+    use starknet::{ClassHash, ContractAddress, get_caller_address, get_contract_address};
     use starknet_contracts::permission_manager::{
         IPermissionManagerDispatcher, IPermissionManagerDispatcherTrait
     };
@@ -44,6 +46,7 @@ mod Token {
     component!(path: ERC20Component, storage: erc20, event: ERC20Event);
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
     component!(path: PausableComponent, storage: pausable, event: PausableEvent);
+    component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
 
     #[abi(embed_v0)]
     impl ERC20Impl = ERC20Component::ERC20Impl<ContractState>;
@@ -57,6 +60,8 @@ mod Token {
     impl PausableImpl = PausableComponent::PausableImpl<ContractState>;
     impl PausableInternalImpl = PausableComponent::InternalImpl<ContractState>;
 
+    impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
+
     #[storage]
     struct Storage {
         permission_manager_contract_address: ContractAddress,
@@ -67,7 +72,9 @@ mod Token {
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
         #[substorage(v0)]
-        pausable: PausableComponent::Storage
+        pausable: PausableComponent::Storage,
+        #[substorage(v0)]
+        upgradeable: UpgradeableComponent::Storage
     }
 
     #[event]
@@ -78,7 +85,9 @@ mod Token {
         #[flat]
         OwnableEvent: OwnableComponent::Event,
         #[flat]
-        PausableEvent: PausableComponent::Event
+        PausableEvent: PausableComponent::Event,
+        #[flat]
+        UpgradeableEvent: UpgradeableComponent::Event
     }
 
     #[constructor]
@@ -197,5 +206,13 @@ mod Token {
 
     fn _set_decimals(ref self: ContractState, decimals: u8) {
         self.decimals.write(decimals);
+    }
+
+    #[abi(embed_v0)]
+    impl UpgradeableImpl of IUpgradeable<ContractState> {
+        fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
+            self.ownable.assert_only_owner();
+            self.upgradeable.upgrade(new_class_hash);
+        }
     }
 }
