@@ -170,12 +170,14 @@ mod Token {
             amount: u256
         ) {
             let mut contract_state = ERC20Component::HasComponent::get_contract_mut(ref self);
-            if from.into() != 0 // mint
-                && !(from
-                    .into() == contract_state
-                    .redemption_contract_address
-                    .read() // burn from redemption contract
-                    && recipient.into() == 0) {
+            if from.into() == 0 {
+                check_address_has_role(ref contract_state, WHITELISTED_ROLE, recipient);
+            } else if // mint
+            !(from
+                .into() == contract_state
+                .redemption_contract_address
+                .read() // burn from redemption contract
+                && recipient.into() == 0) {
                 check_address_has_role(ref contract_state, WHITELISTED_ROLE, from);
                 check_address_has_role(ref contract_state, WHITELISTED_ROLE, recipient);
             }

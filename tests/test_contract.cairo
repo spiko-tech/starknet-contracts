@@ -113,6 +113,40 @@ fn minter_whitelisted_by_whitelister_can_mint_token() {
 
 #[should_panic]
 #[test]
+fn minter_not_whitelisted_by_whitelister_can_not_mint_token() {
+    // deploy contracts
+    let (token_contract_dispatcher, token_contract_address, token_contract_owner_address) =
+        setup_token_contract();
+    let (
+        permission_manager_contract_dispatcher,
+        permission_manager_contract_address,
+        permission_manager_contract_admin_address
+    ) =
+        setup_permission_manager_contract();
+
+    // set contract address
+    start_cheat_caller_address(token_contract_address, token_contract_owner_address);
+    token_contract_dispatcher
+        .set_permission_manager_contract_address(permission_manager_contract_address);
+    stop_cheat_caller_address(token_contract_address);
+
+    let minter_address: ContractAddress = 002.try_into().unwrap();
+    let receiver_address: ContractAddress = 003.try_into().unwrap();
+
+    // grant minter / whitelister roles
+    start_cheat_caller_address(
+        permission_manager_contract_address, permission_manager_contract_admin_address
+    );
+    permission_manager_contract_dispatcher.grant_role(MINTER_ROLE, minter_address);
+    stop_cheat_caller_address(permission_manager_contract_address);
+
+    // mint tokens
+    start_cheat_caller_address(token_contract_address, minter_address);
+    token_contract_dispatcher.mint(receiver_address, MINT_AMOUNT);
+}
+
+#[should_panic]
+#[test]
 fn non_minter_can_not_mint_token() {
     // deploy contracts
     let (token_contract_dispatcher, token_contract_address, token_contract_owner_address) =
