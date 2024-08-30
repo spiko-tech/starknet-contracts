@@ -16,9 +16,7 @@ pub mod PermissionManager {
     use openzeppelin::access::accesscontrol::DEFAULT_ADMIN_ROLE;
     use openzeppelin::introspection::src5::SRC5Component;
     use starknet::{ClassHash, ContractAddress};
-
-    const WHITELISTER_ROLE: felt252 = selector!("WHITELISTER_ROLE");
-    const WHITELISTED_ROLE: felt252 = selector!("WHITELISTED_ROLE");
+    use starknet_contracts::roles::{WHITELISTED_ROLE, WHITELISTER_ROLE};
 
     component!(path: AccessControlComponent, storage: accesscontrol, event: AccessControlEvent);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);

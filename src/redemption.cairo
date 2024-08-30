@@ -24,6 +24,9 @@ pub trait IRedemption<TContractState> {
         salt: felt252
     );
     fn set_token_contract_address(ref self: TContractState, contract_address: ContractAddress);
+    fn set_permission_manager_contract_address(
+        ref self: TContractState, contract_address: ContractAddress
+    );
 }
 
 #[starknet::contract]
@@ -37,6 +40,10 @@ mod Redemption {
     use core::pedersen::PedersenTrait;
     use core::hash::{HashStateTrait, HashStateExTrait};
     use starknet_contracts::{ITokenDispatcher, ITokenDispatcherTrait};
+    use starknet_contracts::permission_manager::{
+        IPermissionManagerDispatcher, IPermissionManagerDispatcherTrait
+    };
+    use starknet_contracts::roles::{REDEMPTION_EXECUTOR_ROLE};
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
     component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
@@ -64,6 +71,7 @@ mod Redemption {
     #[storage]
     struct Storage {
         token_contract_address: ContractAddress,
+        permission_manager_contract_address: ContractAddress,
         redemption_details: LegacyMap::<felt252, RedemptionDetails>,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
@@ -122,6 +130,14 @@ mod Redemption {
         self.token_contract_address.write(contract_address);
     }
 
+    #[external(v0)]
+    fn set_permission_manager_contract_address(
+        ref self: ContractState, contract_address: ContractAddress
+    ) {
+        self.ownable.assert_only_owner();
+        self.permission_manager_contract_address.write(contract_address);
+    }
+
     fn hash_redemption_data(
         token: ContractAddress, from: ContractAddress, amount: u256, salt: felt252
     ) -> felt252 {
@@ -154,6 +170,15 @@ mod Redemption {
             );
     }
 
+    fn check_address_has_role(ref self: ContractState, role: felt252, address: ContractAddress) {
+        let permission_manager_dispatcher = IPermissionManagerDispatcher {
+            contract_address: self.permission_manager_contract_address.read()
+        };
+        if !permission_manager_dispatcher.has_role(role, address) {
+            panic!("Wrong role")
+        };
+    }
+
     #[external(v0)]
     fn execute_redemption(
         ref self: ContractState,
@@ -162,7 +187,7 @@ mod Redemption {
         amount: u256,
         salt: felt252
     ) {
-        self.ownable.assert_only_owner();
+        check_address_has_role(ref self, REDEMPTION_EXECUTOR_ROLE, get_caller_address());
         let redemption_data_hash: felt252 = hash_redemption_data(token, from, amount, salt);
         let mut redemption_data = self
             .redemption_details
@@ -187,7 +212,7 @@ mod Redemption {
         amount: u256,
         salt: felt252
     ) {
-        self.ownable.assert_only_owner();
+        check_address_has_role(ref self, REDEMPTION_EXECUTOR_ROLE, get_caller_address());
         let redemption_data_hash: felt252 = hash_redemption_data(token, from, amount, salt);
         let mut redemption_data = self.redemption_details.read(redemption_data_hash);
         let dispatcher = ITokenDispatcher { contract_address: self.token_contract_address.read() };

@@ -1,5 +1,6 @@
 pub mod permission_manager;
 pub mod redemption;
+pub mod roles;
 
 use starknet::ContractAddress;
 
@@ -36,12 +37,9 @@ mod Token {
         IPermissionManagerDispatcher, IPermissionManagerDispatcherTrait
     };
     use starknet_contracts::redemption::{IRedemptionDispatcher, IRedemptionDispatcherTrait};
-
-    const MINTER_ROLE: felt252 = selector!("MINTER_ROLE");
-    const PAUSER_ROLE: felt252 = selector!("PAUSER_ROLE");
-    const BURNER_ROLE: felt252 = selector!("BURNER_ROLE");
-    const WHITELISTER_ROLE: felt252 = selector!("WHITELISTER_ROLE");
-    const WHITELISTED_ROLE: felt252 = selector!("WHITELISTED_ROLE");
+    use starknet_contracts::roles::{
+        MINTER_ROLE, WHITELISTED_ROLE, WHITELISTER_ROLE, BURNER_ROLE, PAUSER_ROLE
+    };
 
     component!(path: ERC20Component, storage: erc20, event: ERC20Event);
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
