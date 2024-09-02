@@ -1,20 +1,27 @@
 use starknet::ContractAddress;
 use snforge_std::{
-    declare, ContractClassTrait, test_address, start_cheat_caller_address, stop_cheat_caller_address
+    declare, ContractClassTrait, test_address, start_cheat_caller_address,
+    stop_cheat_caller_address, spy_events, EventSpyAssertionsTrait,
 };
 use openzeppelin::utils::serde::SerializedAppend;
 use starknet_contracts::{ITokenDispatcher, ITokenDispatcherTrait};
 use starknet_contracts::permission_manager::{
     IPermissionManagerDispatcher, IPermissionManagerDispatcherTrait
 };
-use starknet_contracts::redemption::{IRedemptionDispatcher, IRedemptionDispatcherTrait};
+use starknet_contracts::redemption::{
+    Redemption, IRedemptionDispatcher, IRedemptionDispatcherTrait, RedemptionData,
+    RedemptionInitiated, RedemptionExecuted, RedemptionCanceled, hash_redemption_data
+};
 use starknet_contracts::roles::{
     MINTER_ROLE, WHITELISTED_ROLE, WHITELISTER_ROLE, BURNER_ROLE, PAUSER_ROLE,
     REDEMPTION_EXECUTOR_ROLE
 };
+use openzeppelin::token::erc20::{ERC20Component};
+use openzeppelin::security::PausableComponent;
 
 const MINT_AMOUNT: u256 = 3;
 const REDEMPTION_SALT: felt252 = 0;
+const TOKEN_DECIMALS: u8 = 5;
 
 fn setup_permission_manager_contract() -> (
     IPermissionManagerDispatcher, ContractAddress, ContractAddress
@@ -31,9 +38,10 @@ fn setup_token_contract() -> (ITokenDispatcher, ContractAddress, ContractAddress
     let contract_owner_address: ContractAddress = 001.try_into().unwrap();
     let contract = declare("Token").unwrap();
     let mut constructor_calldata: Array::<felt252> = array![contract_owner_address.into()];
-    let token_name: ByteArray = "MyToken";
-    let token_symbol: ByteArray = "MTK";
-    let decimals: u8 = 5;
+    let token_name: ByteArray =
+        "MyToken"; // would like to reuse constant but can't have ByteArray constants ...
+    let token_symbol: ByteArray = "TK";
+    let decimals: u8 = TOKEN_DECIMALS;
     constructor_calldata.append_serde(token_name);
     constructor_calldata.append_serde(token_symbol);
     constructor_calldata.append_serde(decimals);
@@ -59,8 +67,8 @@ fn can_set_name_symbol_and_decimals() {
     let token_symbol = token_contract_dispatcher.symbol();
     let token_decimals = token_contract_dispatcher.decimals();
     assert!(token_name == "MyToken", "Wrong token name");
-    assert!(token_symbol == "MTK", "Wrong token symbol");
-    assert!(token_decimals == 5, "Wrong token decimals");
+    assert!(token_symbol == "TK", "Wrong token symbol");
+    assert!(token_decimals == TOKEN_DECIMALS, "Wrong token decimals");
 }
 
 #[test]
@@ -74,6 +82,8 @@ fn minter_whitelisted_by_whitelister_can_mint_token() {
         permission_manager_contract_admin_address
     ) =
         setup_permission_manager_contract();
+
+    let mut spy = spy_events();
 
     // set contract address
     start_cheat_caller_address(token_contract_address, token_contract_owner_address);
@@ -102,6 +112,21 @@ fn minter_whitelisted_by_whitelister_can_mint_token() {
     start_cheat_caller_address(token_contract_address, minter_address);
     token_contract_dispatcher.mint(receiver_address, MINT_AMOUNT);
     stop_cheat_caller_address(token_contract_address);
+
+    // check minting event
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    token_contract_address,
+                    ERC20Component::Event::Transfer(
+                        ERC20Component::Transfer {
+                            from: 0.try_into().unwrap(), to: receiver_address, value: MINT_AMOUNT
+                        }
+                    )
+                )
+            ]
+        );
 
     let owner_balance = token_contract_dispatcher.balance_of(receiver_address);
     assert!(owner_balance == MINT_AMOUNT, "Invalid balance");
@@ -188,6 +213,8 @@ fn pauser_can_pause_token() {
     ) =
         setup_permission_manager_contract();
 
+    let mut spy = spy_events();
+
     // set permission manager contract address
     start_cheat_caller_address(token_contract_address, token_contract_owner_address);
     token_contract_dispatcher
@@ -207,6 +234,19 @@ fn pauser_can_pause_token() {
     start_cheat_caller_address(token_contract_address, pauser_address);
     token_contract_dispatcher.pause();
     stop_cheat_caller_address(token_contract_address);
+
+    // check minting event
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    token_contract_address,
+                    PausableComponent::Event::Paused(
+                        PausableComponent::Paused { account: pauser_address }
+                    )
+                )
+            ]
+        );
 }
 
 // role should be pauser
@@ -299,6 +339,8 @@ fn minter_can_redeem_with_redemption_executed_by_executor() {
     ) =
         setup_redemption_contract();
 
+    let mut spy = spy_events();
+
     // set redemption / permission manager contract addresses
     start_cheat_caller_address(token_contract_address, token_contract_owner_address);
     token_contract_dispatcher
@@ -341,6 +383,21 @@ fn minter_can_redeem_with_redemption_executed_by_executor() {
     assert!(token_contract_dispatcher.total_supply() == MINT_AMOUNT, "Invalid total supply");
     stop_cheat_caller_address(token_contract_address);
 
+    // check minting event
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    token_contract_address,
+                    ERC20Component::Event::Transfer(
+                        ERC20Component::Transfer {
+                            from: 0.try_into().unwrap(), to: receiver_address, value: MINT_AMOUNT
+                        }
+                    )
+                )
+            ]
+        );
+
     // redeem tokens + check tokens have been transferred
     start_cheat_caller_address(token_contract_address, receiver_address);
     token_contract_dispatcher.redeem(MINT_AMOUNT, REDEMPTION_SALT);
@@ -351,11 +408,96 @@ fn minter_can_redeem_with_redemption_executed_by_executor() {
     );
     stop_cheat_caller_address(token_contract_address);
 
+    // check redemption initiated event
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    redemption_contract_address,
+                    Redemption::Event::RedemptionInitiated(
+                        RedemptionInitiated {
+                            data: RedemptionData {
+                                token: token_contract_address,
+                                from: receiver_address,
+                                amount: MINT_AMOUNT
+                            },
+                            hash: hash_redemption_data(
+                                token_contract_address,
+                                receiver_address,
+                                MINT_AMOUNT,
+                                REDEMPTION_SALT
+                            )
+                        }
+                    )
+                )
+            ]
+        );
+
+    // check transfer to redemption contract event
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    token_contract_address,
+                    ERC20Component::Event::Transfer(
+                        ERC20Component::Transfer {
+                            from: receiver_address,
+                            to: redemption_contract_address,
+                            value: MINT_AMOUNT
+                        }
+                    )
+                )
+            ]
+        );
+
     // execute redemption + check tokens are burned
     start_cheat_caller_address(redemption_contract_address, redemption_executor_address);
     redemption_contract_dispatcher
         .execute_redemption(token_contract_address, receiver_address, MINT_AMOUNT, REDEMPTION_SALT);
     stop_cheat_caller_address(redemption_contract_address);
+
+    // check redemption executed event
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    redemption_contract_address,
+                    Redemption::Event::RedemptionExecuted(
+                        RedemptionExecuted {
+                            data: RedemptionData {
+                                token: token_contract_address,
+                                from: receiver_address,
+                                amount: MINT_AMOUNT
+                            },
+                            hash: hash_redemption_data(
+                                token_contract_address,
+                                receiver_address,
+                                MINT_AMOUNT,
+                                REDEMPTION_SALT
+                            )
+                        }
+                    )
+                )
+            ]
+        );
+
+    // check burning event
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    token_contract_address,
+                    ERC20Component::Event::Transfer(
+                        ERC20Component::Transfer {
+                            from: redemption_contract_address,
+                            to: 0.try_into().unwrap(),
+                            value: MINT_AMOUNT
+                        }
+                    )
+                )
+            ]
+        );
+
     assert!(token_contract_dispatcher.total_supply() == 0, "Invalid total supply");
 }
 
@@ -435,7 +577,7 @@ fn non_executor_can_not_execute_redemption() {
 }
 
 #[test]
-fn minter_can_redeem_with_redemption_canceled() {
+fn minter_can_redeem_with_redemption_canceled_by_executor() {
     // deploy contracts
     let (token_contract_dispatcher, token_contract_address, token_contract_owner_address) =
         setup_token_contract();
@@ -451,6 +593,8 @@ fn minter_can_redeem_with_redemption_canceled() {
         redemption_contract_owner_address
     ) =
         setup_redemption_contract();
+
+    let mut spy = spy_events();
 
     // set redemption / permission manager contract addresses
     start_cheat_caller_address(token_contract_address, token_contract_owner_address);
@@ -492,6 +636,21 @@ fn minter_can_redeem_with_redemption_canceled() {
     assert!(token_contract_dispatcher.total_supply() == MINT_AMOUNT, "Invalid total supply");
     stop_cheat_caller_address(token_contract_address);
 
+    // check minting event
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    token_contract_address,
+                    ERC20Component::Event::Transfer(
+                        ERC20Component::Transfer {
+                            from: 0.try_into().unwrap(), to: receiver_address, value: MINT_AMOUNT
+                        }
+                    )
+                )
+            ]
+        );
+
     // redeem tokens + check tokens have been transferred
     start_cheat_caller_address(token_contract_address, receiver_address);
     token_contract_dispatcher.redeem(MINT_AMOUNT, REDEMPTION_SALT);
@@ -502,11 +661,96 @@ fn minter_can_redeem_with_redemption_canceled() {
     );
     stop_cheat_caller_address(token_contract_address);
 
+    // check redemption initiated event
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    redemption_contract_address,
+                    Redemption::Event::RedemptionInitiated(
+                        RedemptionInitiated {
+                            data: RedemptionData {
+                                token: token_contract_address,
+                                from: receiver_address,
+                                amount: MINT_AMOUNT
+                            },
+                            hash: hash_redemption_data(
+                                token_contract_address,
+                                receiver_address,
+                                MINT_AMOUNT,
+                                REDEMPTION_SALT
+                            )
+                        }
+                    )
+                )
+            ]
+        );
+
+    // check transfer to redemption contract event
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    token_contract_address,
+                    ERC20Component::Event::Transfer(
+                        ERC20Component::Transfer {
+                            from: receiver_address,
+                            to: redemption_contract_address,
+                            value: MINT_AMOUNT
+                        }
+                    )
+                )
+            ]
+        );
+
     // execute redemption + check tokens are burned
     start_cheat_caller_address(redemption_contract_address, redemption_executor_address);
     redemption_contract_dispatcher
         .cancel_redemption(token_contract_address, receiver_address, MINT_AMOUNT, REDEMPTION_SALT);
     stop_cheat_caller_address(redemption_contract_address);
+
+    // check redemption canceled event
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    redemption_contract_address,
+                    Redemption::Event::RedemptionCanceled(
+                        RedemptionCanceled {
+                            data: RedemptionData {
+                                token: token_contract_address,
+                                from: receiver_address,
+                                amount: MINT_AMOUNT
+                            },
+                            hash: hash_redemption_data(
+                                token_contract_address,
+                                receiver_address,
+                                MINT_AMOUNT,
+                                REDEMPTION_SALT
+                            )
+                        }
+                    )
+                )
+            ]
+        );
+
+    // check transfer back event
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    token_contract_address,
+                    ERC20Component::Event::Transfer(
+                        ERC20Component::Transfer {
+                            from: redemption_contract_address,
+                            to: receiver_address,
+                            value: MINT_AMOUNT
+                        }
+                    )
+                )
+            ]
+        );
+
     assert!(
         token_contract_dispatcher.balance_of(receiver_address) == MINT_AMOUNT,
         "Invalid owner balance"

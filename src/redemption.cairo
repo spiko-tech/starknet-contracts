@@ -1,4 +1,6 @@
 use starknet::{ContractAddress};
+use core::pedersen::PedersenTrait;
+use core::hash::{HashStateTrait, HashStateExTrait};
 
 #[starknet::interface]
 pub trait IRedemption<TContractState> {
@@ -29,21 +31,58 @@ pub trait IRedemption<TContractState> {
     );
 }
 
+#[derive(Drop, Hash, Serde, starknet::Event)]
+pub struct RedemptionData {
+    pub token: ContractAddress,
+    pub from: ContractAddress,
+    pub amount: u256,
+}
+
+#[derive(Drop, starknet::Event)]
+pub struct RedemptionInitiated {
+    #[key]
+    pub hash: felt252,
+    pub data: RedemptionData
+}
+
+#[derive(Drop, starknet::Event)]
+pub struct RedemptionExecuted {
+    #[key]
+    pub hash: felt252,
+    pub data: RedemptionData
+}
+
+#[derive(Drop, starknet::Event)]
+pub struct RedemptionCanceled {
+    #[key]
+    pub hash: felt252,
+    pub data: RedemptionData
+}
+
+pub fn hash_redemption_data(
+    token: ContractAddress, from: ContractAddress, amount: u256, salt: felt252
+) -> felt252 {
+    let redemption_data = RedemptionData { token, from, amount };
+    PedersenTrait::new(salt).update_with(redemption_data).finalize()
+}
+
 #[starknet::contract]
-mod Redemption {
+pub mod Redemption {
     use OwnableComponent::InternalTrait;
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::upgrades::UpgradeableComponent;
     use openzeppelin::upgrades::interface::IUpgradeable;
     use starknet::{ClassHash, ContractAddress, get_block_timestamp, get_caller_address};
     use core::dict::Felt252Dict;
-    use core::pedersen::PedersenTrait;
-    use core::hash::{HashStateTrait, HashStateExTrait};
     use starknet_contracts::{ITokenDispatcher, ITokenDispatcherTrait};
     use starknet_contracts::permission_manager::{
         IPermissionManagerDispatcher, IPermissionManagerDispatcherTrait
     };
     use starknet_contracts::roles::{REDEMPTION_EXECUTOR_ROLE};
+    use super::{
+        RedemptionData, RedemptionInitiated, RedemptionCanceled, RedemptionExecuted,
+        hash_redemption_data
+    };
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
     component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
@@ -79,37 +118,9 @@ mod Redemption {
         upgradeable: UpgradeableComponent::Storage
     }
 
-    #[derive(Drop, Hash, Serde, starknet::Event)]
-    struct RedemptionData {
-        token: ContractAddress,
-        from: ContractAddress,
-        amount: u256,
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct RedemptionInitiated {
-        #[key]
-        hash: felt252,
-        data: RedemptionData
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct RedemptionExecuted {
-        #[key]
-        hash: felt252,
-        data: RedemptionData
-    }
-
-    #[derive(Drop, starknet::Event)]
-    struct RedemptionCanceled {
-        #[key]
-        hash: felt252,
-        data: RedemptionData
-    }
-
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         RedemptionInitiated: RedemptionInitiated,
         RedemptionExecuted: RedemptionExecuted,
         RedemptionCanceled: RedemptionCanceled,
@@ -136,13 +147,6 @@ mod Redemption {
     ) {
         self.ownable.assert_only_owner();
         self.permission_manager_contract_address.write(contract_address);
-    }
-
-    fn hash_redemption_data(
-        token: ContractAddress, from: ContractAddress, amount: u256, salt: felt252
-    ) -> felt252 {
-        let redemption_data = RedemptionData { token, from, amount };
-        PedersenTrait::new(salt).update_with(redemption_data).finalize()
     }
 
     #[external(v0)]
