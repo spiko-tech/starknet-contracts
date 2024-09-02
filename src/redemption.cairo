@@ -193,9 +193,7 @@ pub mod Redemption {
     ) {
         check_address_has_role(ref self, REDEMPTION_EXECUTOR_ROLE, get_caller_address());
         let redemption_data_hash: felt252 = hash_redemption_data(token, from, amount, salt);
-        let mut redemption_data = self
-            .redemption_details
-            .read(redemption_data_hash); // does read panic if data is not there ?
+        let mut redemption_data = self.redemption_details.read(redemption_data_hash);
         let dispatcher = ITokenDispatcher { contract_address: self.token_contract_address.read() };
         dispatcher.burn(amount);
         redemption_data.status = RedemptionStatus::Executed;
