@@ -153,9 +153,9 @@ mod Redemption {
         amount: u256,
         salt: felt252
     ) {
-        assert(
+        assert!(
             get_caller_address() == self.token_contract_address.read(),
-            'Caller is not token contract'
+            "Caller should be token contract"
         );
         let redemption_data_hash: felt252 = hash_redemption_data(token, from, amount, salt);
         let redemption_details = RedemptionDetails {
@@ -175,7 +175,7 @@ mod Redemption {
             contract_address: self.permission_manager_contract_address.read()
         };
         if !permission_manager_dispatcher.has_role(role, address) {
-            panic!("Wrong role")
+            panic!("Wrong role: role should be {}", role)
         };
     }
 
