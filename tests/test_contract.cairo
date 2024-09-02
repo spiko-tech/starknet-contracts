@@ -58,9 +58,9 @@ fn can_set_name_symbol_and_decimals() {
     let token_name = token_contract_dispatcher.name();
     let token_symbol = token_contract_dispatcher.symbol();
     let token_decimals = token_contract_dispatcher.decimals();
-    assert(token_name == "MyToken", 'Wrong token name');
-    assert(token_symbol == "MTK", 'Wrong token symbol');
-    assert(token_decimals == 5, 'Wrong token decimals');
+    assert!(token_name == "MyToken", "Wrong token name");
+    assert!(token_symbol == "MTK", "Wrong token symbol");
+    assert!(token_decimals == 5, "Wrong token decimals");
 }
 
 #[test]
@@ -104,11 +104,14 @@ fn minter_whitelisted_by_whitelister_can_mint_token() {
     stop_cheat_caller_address(token_contract_address);
 
     let owner_balance = token_contract_dispatcher.balance_of(receiver_address);
-    assert(owner_balance == MINT_AMOUNT, 'invalid balance');
-    assert(token_contract_dispatcher.total_supply() == MINT_AMOUNT, 'invalid total supply');
+    assert!(owner_balance == MINT_AMOUNT, "Invalid balance");
+    assert!(token_contract_dispatcher.total_supply() == MINT_AMOUNT, "Invalid total supply");
 }
 
-#[should_panic]
+// role should be whitelisted
+#[should_panic(
+    expected: "Wrong role: role should be 73912596405270985899152466852138375248387282755116208396838325475458431817"
+)]
 #[test]
 fn minter_not_whitelisted_by_whitelister_can_not_mint_token() {
     // deploy contracts
@@ -142,7 +145,10 @@ fn minter_not_whitelisted_by_whitelister_can_not_mint_token() {
     token_contract_dispatcher.mint(receiver_address, MINT_AMOUNT);
 }
 
-#[should_panic]
+// role should be minter
+#[should_panic(
+    expected: "Wrong role: role should be 1438109952812144829738888816133633444252201913124473511188290282179550336678"
+)]
 #[test]
 fn non_minter_can_not_mint_token() {
     // deploy contracts
@@ -203,7 +209,10 @@ fn pauser_can_pause_token() {
     stop_cheat_caller_address(token_contract_address);
 }
 
-#[should_panic]
+// role should be pauser
+#[should_panic(
+    expected: "Wrong role: role should be 833306884038677809637860575724506334387531562138252562269278794760766457386"
+)]
 #[test]
 fn non_pauser_can_not_pause_token() {
     // deploy contracts
@@ -268,7 +277,7 @@ fn minter_can_not_mint_token_if_paused() {
     start_cheat_caller_address(token_contract_address, minter_address);
     token_contract_dispatcher.mint(receiver_address, MINT_AMOUNT);
     let receiver_balance = token_contract_dispatcher.balance_of(receiver_address);
-    assert(receiver_balance == MINT_AMOUNT, 'invalid balance');
+    assert!(receiver_balance == MINT_AMOUNT, "Invalid balance");
     stop_cheat_caller_address(token_contract_address);
 }
 
@@ -325,20 +334,20 @@ fn minter_can_redeem_with_redemption_executed_by_executor() {
     // mint tokens + check tokens have been minted
     start_cheat_caller_address(token_contract_address, minter_address);
     token_contract_dispatcher.mint(receiver_address, MINT_AMOUNT);
-    assert(
+    assert!(
         token_contract_dispatcher.balance_of(receiver_address) == MINT_AMOUNT,
-        'invalid owner balance'
+        "Invalid owner balance"
     );
-    assert(token_contract_dispatcher.total_supply() == MINT_AMOUNT, 'invalid total supply');
+    assert!(token_contract_dispatcher.total_supply() == MINT_AMOUNT, "Invalid total supply");
     stop_cheat_caller_address(token_contract_address);
 
     // redeem tokens + check tokens have been transferred
     start_cheat_caller_address(token_contract_address, receiver_address);
     token_contract_dispatcher.redeem(MINT_AMOUNT, REDEMPTION_SALT);
-    assert(token_contract_dispatcher.balance_of(receiver_address) == 0, 'invalid owner balance');
-    assert(
+    assert!(token_contract_dispatcher.balance_of(receiver_address) == 0, "Invalid owner balance");
+    assert!(
         token_contract_dispatcher.balance_of(redemption_contract_address) == MINT_AMOUNT,
-        'invalid owner balance'
+        "Invalid owner balance"
     );
     stop_cheat_caller_address(token_contract_address);
 
@@ -347,10 +356,13 @@ fn minter_can_redeem_with_redemption_executed_by_executor() {
     redemption_contract_dispatcher
         .execute_redemption(token_contract_address, receiver_address, MINT_AMOUNT, REDEMPTION_SALT);
     stop_cheat_caller_address(redemption_contract_address);
-    assert(token_contract_dispatcher.total_supply() == 0, 'invalid total supply');
+    assert!(token_contract_dispatcher.total_supply() == 0, "Invalid total supply");
 }
 
-#[should_panic]
+// role should be redemption executor
+#[should_panic(
+    expected: "Wrong role: role should be 1755078849743812584117181869573714026665097150780435520223569283416289084708"
+)]
 #[test]
 fn non_executor_can_not_execute_redemption() {
     // deploy contracts
@@ -401,20 +413,20 @@ fn non_executor_can_not_execute_redemption() {
     // mint tokens + check tokens have been minted
     start_cheat_caller_address(token_contract_address, minter_address);
     token_contract_dispatcher.mint(receiver_address, MINT_AMOUNT);
-    assert(
+    assert!(
         token_contract_dispatcher.balance_of(receiver_address) == MINT_AMOUNT,
-        'invalid owner balance'
+        "Invalid owner balance"
     );
-    assert(token_contract_dispatcher.total_supply() == MINT_AMOUNT, 'invalid total supply');
+    assert!(token_contract_dispatcher.total_supply() == MINT_AMOUNT, "Invalid total supply");
     stop_cheat_caller_address(token_contract_address);
 
     // redeem tokens + check tokens have been transferred
     start_cheat_caller_address(token_contract_address, receiver_address);
     token_contract_dispatcher.redeem(MINT_AMOUNT, REDEMPTION_SALT);
-    assert(token_contract_dispatcher.balance_of(receiver_address) == 0, 'invalid owner balance');
-    assert(
+    assert!(token_contract_dispatcher.balance_of(receiver_address) == 0, "Invalid owner balance");
+    assert!(
         token_contract_dispatcher.balance_of(redemption_contract_address) == MINT_AMOUNT,
-        'invalid owner balance'
+        "Invalid owner balance"
     );
     stop_cheat_caller_address(token_contract_address);
 
@@ -473,20 +485,20 @@ fn minter_can_redeem_with_redemption_canceled() {
     // mint tokens + check tokens have been minted
     start_cheat_caller_address(token_contract_address, minter_address);
     token_contract_dispatcher.mint(receiver_address, MINT_AMOUNT);
-    assert(
+    assert!(
         token_contract_dispatcher.balance_of(receiver_address) == MINT_AMOUNT,
-        'invalid owner balance'
+        "Invalid owner balance"
     );
-    assert(token_contract_dispatcher.total_supply() == MINT_AMOUNT, 'invalid total supply');
+    assert!(token_contract_dispatcher.total_supply() == MINT_AMOUNT, "Invalid total supply");
     stop_cheat_caller_address(token_contract_address);
 
     // redeem tokens + check tokens have been transferred
     start_cheat_caller_address(token_contract_address, receiver_address);
     token_contract_dispatcher.redeem(MINT_AMOUNT, REDEMPTION_SALT);
-    assert(token_contract_dispatcher.balance_of(receiver_address) == 0, 'invalid owner balance');
-    assert(
+    assert!(token_contract_dispatcher.balance_of(receiver_address) == 0, "Invalid owner balance");
+    assert!(
         token_contract_dispatcher.balance_of(redemption_contract_address) == MINT_AMOUNT,
-        'invalid owner balance'
+        "Invalid owner balance"
     );
     stop_cheat_caller_address(token_contract_address);
 
@@ -495,14 +507,17 @@ fn minter_can_redeem_with_redemption_canceled() {
     redemption_contract_dispatcher
         .cancel_redemption(token_contract_address, receiver_address, MINT_AMOUNT, REDEMPTION_SALT);
     stop_cheat_caller_address(redemption_contract_address);
-    assert(
+    assert!(
         token_contract_dispatcher.balance_of(receiver_address) == MINT_AMOUNT,
-        'invalid owner balance'
+        "Invalid owner balance"
     );
-    assert(token_contract_dispatcher.total_supply() == MINT_AMOUNT, 'invalid total supply');
+    assert!(token_contract_dispatcher.total_supply() == MINT_AMOUNT, "Invalid total supply");
 }
 
-#[should_panic]
+// role should be redemption executor
+#[should_panic(
+    expected: "Wrong role: role should be 1755078849743812584117181869573714026665097150780435520223569283416289084708"
+)]
 #[test]
 fn non_executor_can_not_cancel_redemption() {
     // deploy contracts
@@ -551,20 +566,20 @@ fn non_executor_can_not_cancel_redemption() {
     // mint tokens + check tokens have been minted
     start_cheat_caller_address(token_contract_address, minter_address);
     token_contract_dispatcher.mint(receiver_address, MINT_AMOUNT);
-    assert(
+    assert!(
         token_contract_dispatcher.balance_of(receiver_address) == MINT_AMOUNT,
-        'invalid owner balance'
+        "Invalid owner balance"
     );
-    assert(token_contract_dispatcher.total_supply() == MINT_AMOUNT, 'invalid total supply');
+    assert!(token_contract_dispatcher.total_supply() == MINT_AMOUNT, "Invalid total supply");
     stop_cheat_caller_address(token_contract_address);
 
     // redeem tokens + check tokens have been transferred
     start_cheat_caller_address(token_contract_address, receiver_address);
     token_contract_dispatcher.redeem(MINT_AMOUNT, REDEMPTION_SALT);
-    assert(token_contract_dispatcher.balance_of(receiver_address) == 0, 'invalid owner balance');
-    assert(
+    assert!(token_contract_dispatcher.balance_of(receiver_address) == 0, "Invalid owner balance");
+    assert!(
         token_contract_dispatcher.balance_of(redemption_contract_address) == MINT_AMOUNT,
-        'invalid owner balance'
+        "Invalid owner balance"
     );
     stop_cheat_caller_address(token_contract_address);
 
