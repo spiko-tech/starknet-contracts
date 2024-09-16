@@ -73,7 +73,6 @@ pub mod Redemption {
     use openzeppelin::upgrades::UpgradeableComponent;
     use openzeppelin::upgrades::interface::IUpgradeable;
     use starknet::{ClassHash, ContractAddress, get_block_timestamp, get_caller_address};
-    use core::dict::Felt252Dict;
     use starknet_contracts::{ITokenDispatcher, ITokenDispatcherTrait};
     use starknet_contracts::permission_manager::{
         IPermissionManagerDispatcher, IPermissionManagerDispatcherTrait
@@ -82,6 +81,9 @@ pub mod Redemption {
     use super::{
         RedemptionData, RedemptionInitiated, RedemptionCanceled, RedemptionExecuted,
         hash_redemption_data
+    };
+    use starknet::storage::{
+        Map, StoragePointerReadAccess, StoragePointerWriteAccess, StoragePathEntry
     };
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -109,9 +111,9 @@ pub mod Redemption {
 
     #[storage]
     struct Storage {
-        token_contract_address: ContractAddress,
-        permission_manager_contract_address: ContractAddress,
-        redemption_details: LegacyMap::<felt252, RedemptionDetails>,
+        pub token_contract_address: ContractAddress,
+        pub permission_manager_contract_address: ContractAddress,
+        redemption_details: Map::<felt252, RedemptionDetails>,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
         #[substorage(v0)]
@@ -165,7 +167,7 @@ pub mod Redemption {
         let redemption_details = RedemptionDetails {
             status: RedemptionStatus::Pending, deadline: get_block_timestamp()
         };
-        self.redemption_details.write(redemption_data_hash, redemption_details);
+        self.redemption_details.entry(redemption_data_hash).write(redemption_details);
         self
             .emit(
                 RedemptionInitiated {
@@ -193,11 +195,11 @@ pub mod Redemption {
     ) {
         check_address_has_role(ref self, REDEMPTION_EXECUTOR_ROLE, get_caller_address());
         let redemption_data_hash: felt252 = hash_redemption_data(token, from, amount, salt);
-        let mut redemption_data = self.redemption_details.read(redemption_data_hash);
+        let mut redemption_data = self.redemption_details.entry(redemption_data_hash).read();
         let dispatcher = ITokenDispatcher { contract_address: self.token_contract_address.read() };
         dispatcher.burn(amount);
         redemption_data.status = RedemptionStatus::Executed;
-        self.redemption_details.write(redemption_data_hash, redemption_data);
+        self.redemption_details.entry(redemption_data_hash).write(redemption_data);
         self
             .emit(
                 RedemptionExecuted {
@@ -216,11 +218,11 @@ pub mod Redemption {
     ) {
         check_address_has_role(ref self, REDEMPTION_EXECUTOR_ROLE, get_caller_address());
         let redemption_data_hash: felt252 = hash_redemption_data(token, from, amount, salt);
-        let mut redemption_data = self.redemption_details.read(redemption_data_hash);
+        let mut redemption_data = self.redemption_details.entry(redemption_data_hash).read();
         let dispatcher = ITokenDispatcher { contract_address: self.token_contract_address.read() };
         dispatcher.transfer(from, amount);
         redemption_data.status = RedemptionStatus::Canceled;
-        self.redemption_details.write(redemption_data_hash, redemption_data);
+        self.redemption_details.entry(redemption_data_hash).write(redemption_data);
         self
             .emit(
                 RedemptionCanceled {

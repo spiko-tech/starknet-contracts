@@ -1,7 +1,7 @@
 use starknet::ContractAddress;
 use snforge_std::{
-    declare, ContractClassTrait, test_address, start_cheat_caller_address,
-    stop_cheat_caller_address, spy_events, EventSpyAssertionsTrait,
+    declare, ContractClassTrait, start_cheat_caller_address, stop_cheat_caller_address, spy_events,
+    EventSpyAssertionsTrait,
 };
 use openzeppelin::utils::serde::SerializedAppend;
 use starknet_contracts::{ITokenDispatcher, ITokenDispatcherTrait};

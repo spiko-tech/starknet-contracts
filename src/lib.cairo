@@ -37,9 +37,8 @@ mod Token {
         IPermissionManagerDispatcher, IPermissionManagerDispatcherTrait
     };
     use starknet_contracts::redemption::{IRedemptionDispatcher, IRedemptionDispatcherTrait};
-    use starknet_contracts::roles::{
-        MINTER_ROLE, WHITELISTED_ROLE, WHITELISTER_ROLE, BURNER_ROLE, PAUSER_ROLE
-    };
+    use starknet_contracts::roles::{MINTER_ROLE, WHITELISTED_ROLE, BURNER_ROLE, PAUSER_ROLE};
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
 
     component!(path: ERC20Component, storage: erc20, event: ERC20Event);
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
