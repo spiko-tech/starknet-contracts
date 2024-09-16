@@ -95,7 +95,7 @@ pub mod Redemption {
 
     impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
 
-    #[derive(Copy, Drop, Serde, starknet::Store)]
+    #[derive(Copy, Drop, Serde, PartialEq, starknet::Store)]
     enum RedemptionStatus {
         Null,
         Pending,
@@ -111,8 +111,8 @@ pub mod Redemption {
 
     #[storage]
     struct Storage {
-        pub token_contract_address: ContractAddress,
-        pub permission_manager_contract_address: ContractAddress,
+        token_contract_address: ContractAddress,
+        permission_manager_contract_address: ContractAddress,
         redemption_details: Map::<felt252, RedemptionDetails>,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
@@ -167,6 +167,8 @@ pub mod Redemption {
         let redemption_details = RedemptionDetails {
             status: RedemptionStatus::Pending, deadline: get_block_timestamp()
         };
+        let existing_redemption = self.redemption_details.entry(redemption_data_hash).read();
+        assert!(existing_redemption.status == RedemptionStatus::Null, "Redemption already exists");
         self.redemption_details.entry(redemption_data_hash).write(redemption_details);
         self
             .emit(
@@ -196,10 +198,11 @@ pub mod Redemption {
         check_address_has_role(ref self, REDEMPTION_EXECUTOR_ROLE, get_caller_address());
         let redemption_data_hash: felt252 = hash_redemption_data(token, from, amount, salt);
         let mut redemption_data = self.redemption_details.entry(redemption_data_hash).read();
-        let dispatcher = ITokenDispatcher { contract_address: self.token_contract_address.read() };
-        dispatcher.burn(amount);
+        assert!(redemption_data.status == RedemptionStatus::Pending, "Redemption is not pending");
         redemption_data.status = RedemptionStatus::Executed;
         self.redemption_details.entry(redemption_data_hash).write(redemption_data);
+        let dispatcher = ITokenDispatcher { contract_address: self.token_contract_address.read() };
+        dispatcher.burn(amount);
         self
             .emit(
                 RedemptionExecuted {
@@ -219,10 +222,11 @@ pub mod Redemption {
         check_address_has_role(ref self, REDEMPTION_EXECUTOR_ROLE, get_caller_address());
         let redemption_data_hash: felt252 = hash_redemption_data(token, from, amount, salt);
         let mut redemption_data = self.redemption_details.entry(redemption_data_hash).read();
-        let dispatcher = ITokenDispatcher { contract_address: self.token_contract_address.read() };
-        dispatcher.transfer(from, amount);
+        assert!(redemption_data.status == RedemptionStatus::Pending, "Redemption is not pending");
         redemption_data.status = RedemptionStatus::Canceled;
         self.redemption_details.entry(redemption_data_hash).write(redemption_data);
+        let dispatcher = ITokenDispatcher { contract_address: self.token_contract_address.read() };
+        dispatcher.transfer(from, amount);
         self
             .emit(
                 RedemptionCanceled {
