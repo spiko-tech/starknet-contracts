@@ -831,3 +831,68 @@ fn non_executor_can_not_cancel_redemption() {
     redemption_contract_dispatcher
         .cancel_redemption(token_contract_address, receiver_address, MINT_AMOUNT, REDEMPTION_SALT);
 }
+
+#[should_panic(expected: "Redemption already exists")]
+#[test]
+fn cant_initiate_redemption_with_same_arguments() {
+    // deploy contracts
+    let (token_contract_dispatcher, token_contract_address, token_contract_owner_address) =
+        setup_token_contract();
+    let (
+        permission_manager_contract_dispatcher,
+        permission_manager_contract_address,
+        permission_manager_contract_admin_address
+    ) =
+        setup_permission_manager_contract();
+    let (
+        redemption_contract_dispatcher,
+        redemption_contract_address,
+        redemption_contract_owner_address
+    ) =
+        setup_redemption_contract();
+
+    // set redemption / permission manager contract addresses
+    start_cheat_caller_address(token_contract_address, token_contract_owner_address);
+    token_contract_dispatcher
+        .set_permission_manager_contract_address(permission_manager_contract_address);
+    token_contract_dispatcher.set_redemption_contract_address(redemption_contract_address);
+    stop_cheat_caller_address(token_contract_address);
+    start_cheat_caller_address(redemption_contract_address, redemption_contract_owner_address);
+    redemption_contract_dispatcher.set_token_contract_address(token_contract_address);
+    redemption_contract_dispatcher
+        .set_permission_manager_contract_address(permission_manager_contract_address);
+    stop_cheat_caller_address(redemption_contract_address);
+
+    let minter_address: ContractAddress = 002.try_into().unwrap();
+    let receiver_address: ContractAddress = 003.try_into().unwrap();
+
+    // grant roles via permission manager
+    start_cheat_caller_address(
+        permission_manager_contract_address, permission_manager_contract_admin_address
+    );
+    permission_manager_contract_dispatcher.grant_role(MINTER_ROLE, minter_address);
+    permission_manager_contract_dispatcher
+        .grant_role(WHITELISTER_ROLE, permission_manager_contract_admin_address);
+    permission_manager_contract_dispatcher
+        .grant_role(WHITELISTED_ROLE, redemption_contract_address);
+    permission_manager_contract_dispatcher.grant_role(WHITELISTED_ROLE, receiver_address);
+    stop_cheat_caller_address(permission_manager_contract_address);
+
+    // mint tokens twice (so end of test doesn't fail because of insufficient balance) + check
+    // tokens have been minted
+    start_cheat_caller_address(token_contract_address, minter_address);
+    token_contract_dispatcher.mint(receiver_address, MINT_AMOUNT);
+    token_contract_dispatcher.mint(receiver_address, MINT_AMOUNT);
+    assert!(
+        token_contract_dispatcher.balance_of(receiver_address) == 2 * MINT_AMOUNT,
+        "Invalid owner balance"
+    );
+    assert!(token_contract_dispatcher.total_supply() == 2 * MINT_AMOUNT, "Invalid total supply");
+    stop_cheat_caller_address(token_contract_address);
+
+    // redeem tokens + check tokens have been transferred
+    start_cheat_caller_address(token_contract_address, receiver_address);
+    token_contract_dispatcher.redeem(MINT_AMOUNT, REDEMPTION_SALT);
+    token_contract_dispatcher.redeem(MINT_AMOUNT, REDEMPTION_SALT);
+}
+
