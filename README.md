@@ -23,7 +23,9 @@ Build the contracts, then run:
 snforge test
 ```
 
-To generate a test coverage `.lcov` file , install [cairo-coverage](https://github.com/software-mansion/cairo-coverage) then run:
+To generate a test coverage `.lcov` file ,
+install [cairo-coverage](https://github.com/software-mansion/cairo-coverage)
+then run:
 
 ```bash
 snforge test --coverage
