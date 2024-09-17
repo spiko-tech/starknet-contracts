@@ -1,5 +1,11 @@
 target
 .snfoundry_cache/
-.snfoundry_cache/
 **/*~
 snfoundry.toml
+.snfoundry_versioned_programs/
+**/*.html
+**/*.png
+**/*.css
+snfoundry_trace/
+cmd_line
+coverage/
