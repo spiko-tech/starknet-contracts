@@ -170,8 +170,9 @@ mod Token {
             let mut contract_state = ERC20Component::HasComponent::get_contract_mut(ref self);
             if from.into() == 0 { // mint
                 check_address_has_role(ref contract_state, WHITELISTED_ROLE, recipient);
-            } else if !(from.into() == contract_state.redemption_contract_address.read()
-                && recipient.into() == 0) { // burn from redemption contract
+            } else if recipient.into() == 0 { // burn
+                check_address_has_role(ref contract_state, BURNER_ROLE, from);
+            } else {
                 check_address_has_role(ref contract_state, WHITELISTED_ROLE, from);
                 check_address_has_role(ref contract_state, WHITELISTED_ROLE, recipient);
             }
