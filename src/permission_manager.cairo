@@ -1,9 +1,10 @@
-use starknet::ContractAddress;
+use starknet::{ContractAddress, ClassHash};
 
 #[starknet::interface]
 pub trait IPermissionManager<TContractState> {
     fn has_role(ref self: TContractState, role: felt252, address: ContractAddress) -> bool;
     fn grant_role(ref self: TContractState, role: felt252, address: ContractAddress);
+    fn upgrade(ref self: TContractState, new_class_hash: ClassHash);
 }
 
 #[starknet::contract]

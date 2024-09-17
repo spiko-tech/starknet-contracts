@@ -2,7 +2,7 @@ pub mod permission_manager;
 pub mod redemption;
 pub mod roles;
 
-use starknet::ContractAddress;
+use starknet::{ContractAddress, ClassHash};
 
 #[starknet::interface]
 pub trait IToken<TContractState> {
@@ -21,6 +21,7 @@ pub trait IToken<TContractState> {
     fn name(self: @TContractState) -> ByteArray;
     fn symbol(self: @TContractState) -> ByteArray;
     fn decimals(self: @TContractState) -> u8;
+    fn upgrade(ref self: TContractState, new_class_hash: ClassHash);
 }
 
 #[starknet::contract]

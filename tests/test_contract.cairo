@@ -1,7 +1,7 @@
 use starknet::ContractAddress;
 use snforge_std::{
     declare, ContractClassTrait, start_cheat_caller_address, stop_cheat_caller_address, spy_events,
-    EventSpyAssertionsTrait, DeclareResultTrait
+    EventSpyAssertionsTrait, DeclareResult, DeclareResultTrait
 };
 use openzeppelin::utils::serde::SerializedAppend;
 use starknet_contracts::{ITokenDispatcher, ITokenDispatcherTrait};
@@ -57,6 +57,54 @@ fn setup_redemption_contract() -> (IRedemptionDispatcher, ContractAddress, Contr
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
     let dispatcher = IRedemptionDispatcher { contract_address };
     (dispatcher, contract_address, contract_owner_address)
+}
+
+#[test]
+fn can_upgrade_token_contract() {
+    let (token_contract_dispatcher, token_contract_address, token_contract_owner_address) =
+        setup_token_contract();
+    start_cheat_caller_address(token_contract_address, token_contract_owner_address);
+    if let DeclareResult::Success(new_class_hash) = declare("Redemption")
+        .unwrap() { // would need to upgrade with a contract that has the same interface to be more realistic
+        token_contract_dispatcher.upgrade(new_class_hash.class_hash);
+    } else {
+        panic!("Class declaration failed");
+    }
+}
+
+#[test]
+fn can_upgrade_permission_manager_contract() {
+    let (
+        permission_manager_contract_dispatcher,
+        permission_manager_contract_address,
+        permission_manager_contract_admin_address
+    ) =
+        setup_permission_manager_contract();
+    start_cheat_caller_address(
+        permission_manager_contract_address, permission_manager_contract_admin_address
+    );
+    if let DeclareResult::Success(new_class_hash) = declare("Token").unwrap() { // same here
+        permission_manager_contract_dispatcher.upgrade(new_class_hash.class_hash);
+    } else {
+        panic!("Class declaration failed");
+    }
+}
+
+#[test]
+fn can_upgrade_redemption_contract() {
+    let (
+        redemption_contract_dispatcher,
+        redemption_contract_address,
+        redemption_contract_owner_address
+    ) =
+        setup_redemption_contract();
+    start_cheat_caller_address(redemption_contract_address, redemption_contract_owner_address);
+    if let DeclareResult::Success(new_class_hash) = declare("PermissionManager")
+        .unwrap() { // same here
+        redemption_contract_dispatcher.upgrade(new_class_hash.class_hash);
+    } else {
+        panic!("Class declaration failed");
+    }
 }
 
 #[test]

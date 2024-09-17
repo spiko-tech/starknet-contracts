@@ -1,4 +1,4 @@
-use starknet::{ContractAddress};
+use starknet::{ContractAddress, ClassHash};
 use core::pedersen::PedersenTrait;
 use core::hash::{HashStateTrait, HashStateExTrait};
 
@@ -29,6 +29,7 @@ pub trait IRedemption<TContractState> {
     fn set_permission_manager_contract_address(
         ref self: TContractState, contract_address: ContractAddress
     );
+    fn upgrade(ref self: TContractState, new_class_hash: ClassHash);
 }
 
 #[derive(Drop, Hash, Serde, starknet::Event)]
