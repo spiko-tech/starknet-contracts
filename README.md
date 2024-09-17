@@ -6,9 +6,7 @@
 
 Install [Scarb](https://docs.swmansion.com/scarb/) (NOTE: it is
 recommended to install Scarb with the [asdf version
-manager](https://asdf-vm.com/) and it is **required to use version
-2.6.5** as it is the one supported by Starknet at the moment), then
-run:
+manager](https://asdf-vm.com/):
 
 ```bash
 scarb build
@@ -23,6 +21,12 @@ Build the contracts, then run:
 
 ```bash
 snforge test
+```
+
+To generate a test coverage `.lcov` file , install [cairo-coverage](https://github.com/software-mansion/cairo-coverage) then run:
+
+```bash
+snforge test --coverage
 ```
 
 ## Deploy
