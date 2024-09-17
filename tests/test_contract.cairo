@@ -250,7 +250,7 @@ fn non_minter_can_not_mint_token() {
 }
 
 #[test]
-fn pauser_can_pause_token() {
+fn pauser_can_pause_and_unpause_token() {
     // deploy contracts
     let (token_contract_dispatcher, token_contract_address, token_contract_owner_address) =
         setup_token_contract();
@@ -283,6 +283,11 @@ fn pauser_can_pause_token() {
     token_contract_dispatcher.pause();
     stop_cheat_caller_address(token_contract_address);
 
+    // unpause contract
+    start_cheat_caller_address(token_contract_address, pauser_address);
+    token_contract_dispatcher.unpause();
+    stop_cheat_caller_address(token_contract_address);
+
     // check minting event
     spy
         .assert_emitted(
@@ -291,6 +296,18 @@ fn pauser_can_pause_token() {
                     token_contract_address,
                     PausableComponent::Event::Paused(
                         PausableComponent::Paused { account: pauser_address }
+                    )
+                )
+            ]
+        );
+
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    token_contract_address,
+                    PausableComponent::Event::Unpaused(
+                        PausableComponent::Unpaused { account: pauser_address }
                     )
                 )
             ]
