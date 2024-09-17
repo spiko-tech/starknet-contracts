@@ -1,7 +1,7 @@
 use starknet::ContractAddress;
 use snforge_std::{
     declare, ContractClassTrait, start_cheat_caller_address, stop_cheat_caller_address, spy_events,
-    EventSpyAssertionsTrait,
+    EventSpyAssertionsTrait, DeclareResultTrait
 };
 use openzeppelin::utils::serde::SerializedAppend;
 use starknet_contracts::{ITokenDispatcher, ITokenDispatcherTrait};
@@ -27,7 +27,7 @@ fn setup_permission_manager_contract() -> (
     IPermissionManagerDispatcher, ContractAddress, ContractAddress
 ) {
     let contract_admin_address: ContractAddress = 000.try_into().unwrap();
-    let contract = declare("PermissionManager").unwrap();
+    let contract = declare("PermissionManager").unwrap().contract_class();
     let mut constructor_calldata: Array::<felt252> = array![contract_admin_address.into()];
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
     let dispatcher = IPermissionManagerDispatcher { contract_address };
@@ -36,7 +36,7 @@ fn setup_permission_manager_contract() -> (
 
 fn setup_token_contract() -> (ITokenDispatcher, ContractAddress, ContractAddress) {
     let contract_owner_address: ContractAddress = 001.try_into().unwrap();
-    let contract = declare("Token").unwrap();
+    let contract = declare("Token").unwrap().contract_class();
     let mut constructor_calldata: Array::<felt252> = array![contract_owner_address.into()];
     let token_name: ByteArray =
         "MyToken"; // would like to reuse constant but can't have ByteArray constants ...
@@ -52,7 +52,7 @@ fn setup_token_contract() -> (ITokenDispatcher, ContractAddress, ContractAddress
 
 fn setup_redemption_contract() -> (IRedemptionDispatcher, ContractAddress, ContractAddress) {
     let contract_owner_address: ContractAddress = 001.try_into().unwrap();
-    let contract = declare("Redemption").unwrap();
+    let contract = declare("Redemption").unwrap().contract_class();
     let mut constructor_calldata: Array::<felt252> = array![contract_owner_address.into()];
     let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
     let dispatcher = IRedemptionDispatcher { contract_address };
