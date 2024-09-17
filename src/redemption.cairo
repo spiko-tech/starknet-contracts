@@ -83,7 +83,8 @@ pub mod Redemption {
         hash_redemption_data
     };
     use starknet::storage::{
-        Map, StoragePointerReadAccess, StoragePointerWriteAccess, StoragePathEntry
+        Map, StoragePointerReadAccess, StoragePointerWriteAccess, StoragePathEntry,
+        StorageMapReadAccess
     };
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -97,6 +98,7 @@ pub mod Redemption {
 
     #[derive(Copy, Drop, Serde, PartialEq, starknet::Store)]
     enum RedemptionStatus {
+        #[default]
         Null,
         Pending,
         Executed,
@@ -167,7 +169,7 @@ pub mod Redemption {
         let redemption_details = RedemptionDetails {
             status: RedemptionStatus::Pending, deadline: get_block_timestamp()
         };
-        let existing_redemption = self.redemption_details.entry(redemption_data_hash).read();
+        let existing_redemption = self.redemption_details.read(redemption_data_hash);
         assert!(existing_redemption.status == RedemptionStatus::Null, "Redemption already exists");
         self.redemption_details.entry(redemption_data_hash).write(redemption_details);
         self
