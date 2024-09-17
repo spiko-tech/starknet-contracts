@@ -1,6 +1,7 @@
 # Spiko Starknet Contracts
 
 ![lint and test](https://github.com/spiko-tech/starknet-contracts/actions/workflows/test.yml/badge.svg)
+[![codecov](https://codecov.io/github/spiko-tech/starknet-contracts/graph/badge.svg?token=311N4K6AM3)](https://codecov.io/github/spiko-tech/starknet-contracts)
 
 ## Build
 
