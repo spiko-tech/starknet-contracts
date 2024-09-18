@@ -3,6 +3,112 @@
 ![lint and test](https://github.com/spiko-tech/starknet-contracts/actions/workflows/test.yml/badge.svg)
 [![codecov](https://codecov.io/github/spiko-tech/starknet-contracts/graph/badge.svg?token=311N4K6AM3)](https://codecov.io/github/spiko-tech/starknet-contracts)
 
+## Introduction
+
+### Overview of Smart Contracts
+
+This repository contains three interrelated smart contracts
+that collectively manage tokenized shares of a fund,
+facilitating minting, redemption, and permission control:
+
+1. **`lib.cairo`**: An ERC-20 token contract representing
+   shares in a fund.
+2. **`redemption.cairo`**: Manages the redemption process
+   for users selling their shares back to the fund.
+3. **`permission_manager.cairo`**: Handles role-based access
+   control across the contracts, using roles defined in
+   `roles.cairo`.
+
+### Detailed Descriptions
+
+#### `lib.cairo` (Token Contract)
+
+**Purpose**: Implements an ERC-20 token that symbolizes
+ownership shares in a fund.
+
+**Key Features**:
+
+- **Minting Tokens**: Tokens are minted to whitelisted users
+  when they purchase shares.
+- **Transfer Restrictions**: Enforces transfer limitations
+  to comply with regulatory requirements, allowing transfers
+  only between whitelisted addresses.
+- **Redemption Initiation**: Provides a `redeem` function
+  enabling users to initiate the redemption process by
+  transferring tokens to the `redemption.cairo` contract.
+- **Role Management**: Integrates with the
+  `permission_manager.cairo` contract to verify roles like
+  `MINTER`, `BURNER`, and `PAUSER`.
+
+#### `redemption.cairo` (Redemption Contract)
+
+**Purpose**: Oversees the redemption of tokens when users
+wish to sell their fund shares back.
+
+**Workflow**:
+
+1. **Initiation**:
+   - Users call the `redeem` function in `lib.cairo`,
+     transferring their tokens to the `redemption.cairo`
+     contract.
+   - The `redemption.cairo` contract logs the redemption
+     request and sets its status to `Pending`.
+
+2. **Execution or Cancellation**:
+   - An authorized external operator with the
+     `REDEMPTION_EXECUTOR_ROLE` can:
+     - **Execute Redemption**: Burns the tokens held in the
+       `redemption.cairo` contract, finalizing the
+       redemption.
+     - **Cancel Redemption**: Transfers the tokens back to
+       the user, canceling the redemption.
+
+**Security Measures**:
+
+- **Status Verification**: Each redemption request has a
+  status (`Pending`, `Executed`, or `Canceled`) to prevent
+  duplicate processing.
+- **Unique Identifiers**: Redemptions are tracked using
+  unique hashes derived from redemption data to avoid
+  collisions.
+- **Role Enforcement**: Only operators with specific roles
+  can execute or cancel redemptions.
+
+#### `permission_manager.cairo` (Permission Manager Contract)
+
+**Purpose**: Manages roles and permissions across the token
+and redemption contracts.
+
+**Functionality**:
+
+- **Role Definitions**: Establishes roles such as `MINTER`,
+  `BURNER`, `WHITELISTER`, `WHITELISTED`,
+  `REDEMPTION_EXECUTOR`, and `PAUSER`.
+- **Role Assignment**: Allows the contract owner or
+  designated administrators to grant or revoke roles to
+  addresses.
+- **Access Control**: Enforces role-based permissions,
+  ensuring that only authorized addresses can perform
+  sensitive operations.
+
+**Integration**:
+
+- Both `lib.cairo` and `redemption.cairo` consult the
+  `permission_manager.cairo` contract to verify permissions
+  before executing critical functions.
+
+### Role Definitions (`roles.cairo`)
+
+- **`MINTER_ROLE`**: Permission to mint new tokens.
+- **`BURNER_ROLE`**: Permission to burn tokens.
+- **`WHITELISTER_ROLE`**: Can assign the `WHITELISTED_ROLE`
+  to addresses.
+- **`WHITELISTED_ROLE`**: Allows an address to hold and
+  transfer tokens.
+- **`REDEMPTION_EXECUTOR_ROLE`**: Authorized to execute or
+  cancel redemptions.
+- **`PAUSER_ROLE`**: Can pause or unpause token transfers.
+
 ## Build
 
 Install [Scarb](https://docs.swmansion.com/scarb/) (NOTE: it is
