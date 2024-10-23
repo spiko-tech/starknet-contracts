@@ -2,7 +2,7 @@ pub mod permission_manager;
 pub mod redemption;
 pub mod roles;
 
-use starknet::{ContractAddress, ClassHash};
+use starknet::ContractAddress;
 
 #[starknet::interface]
 pub trait IToken<TContractState> {
@@ -12,16 +12,9 @@ pub trait IToken<TContractState> {
     fn set_redemption_contract_address(ref self: TContractState, contract_address: ContractAddress);
     fn mint(ref self: TContractState, recipient: ContractAddress, amount: u256);
     fn burn(ref self: TContractState, amount: u256);
-    fn transfer(ref self: TContractState, recipient: ContractAddress, amount: u256);
-    fn balance_of(ref self: TContractState, account: ContractAddress) -> u256;
     fn pause(ref self: TContractState);
     fn unpause(ref self: TContractState);
-    fn total_supply(ref self: TContractState) -> u256;
     fn redeem(ref self: TContractState, amount: u256, salt: felt252);
-    fn name(self: @TContractState) -> ByteArray;
-    fn symbol(self: @TContractState) -> ByteArray;
-    fn decimals(self: @TContractState) -> u8;
-    fn upgrade(ref self: TContractState, new_class_hash: ClassHash);
 }
 
 #[starknet::contract]

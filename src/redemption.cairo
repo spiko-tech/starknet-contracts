@@ -1,4 +1,4 @@
-use starknet::{ContractAddress, ClassHash};
+use starknet::{ContractAddress};
 use core::pedersen::PedersenTrait;
 use core::hash::{HashStateTrait, HashStateExTrait};
 
@@ -29,7 +29,6 @@ pub trait IRedemption<TContractState> {
     fn set_permission_manager_contract_address(
         ref self: TContractState, contract_address: ContractAddress
     );
-    fn upgrade(ref self: TContractState, new_class_hash: ClassHash);
 }
 
 #[derive(Drop, Hash, Serde, starknet::Event)]
@@ -87,6 +86,7 @@ pub mod Redemption {
         Map, StoragePointerReadAccess, StoragePointerWriteAccess, StoragePathEntry,
         StorageMapReadAccess
     };
+    use openzeppelin::token::erc20::{ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
     component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
@@ -161,7 +161,7 @@ pub mod Redemption {
             "Caller should be token contract"
         );
         let redemption_data_hash: felt252 = hash_redemption_data(token, from, amount, salt);
-        let redemption_statuses =  RedemptionStatus::Pending;
+        let redemption_statuses = RedemptionStatus::Pending;
         let existing_redemption = self.redemption_statuses.read(redemption_data_hash);
         assert!(existing_redemption == RedemptionStatus::Null, "Redemption already exists");
         self.redemption_statuses.entry(redemption_data_hash).write(redemption_statuses);
@@ -220,7 +220,9 @@ pub mod Redemption {
         assert!(redemption_status == RedemptionStatus::Pending, "Redemption is not pending");
         redemption_status = RedemptionStatus::Canceled;
         self.redemption_statuses.entry(redemption_data_hash).write(redemption_status);
-        let dispatcher = ITokenDispatcher { contract_address: self.token_contract_address.read() };
+        let dispatcher = ERC20ABIDispatcher {
+            contract_address: self.token_contract_address.read()
+        };
         dispatcher.transfer(from, amount);
         self
             .emit(

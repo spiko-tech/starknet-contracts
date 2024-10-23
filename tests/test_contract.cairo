@@ -16,9 +16,13 @@ use starknet_contracts::roles::{
     MINTER_ROLE, WHITELISTED_ROLE, WHITELISTER_ROLE, BURNER_ROLE, PAUSER_ROLE,
     REDEMPTION_EXECUTOR_ROLE
 };
-use openzeppelin::token::erc20::ERC20Component;
+use openzeppelin::token::erc20::{ERC20Component, ERC20ABIDispatcher, ERC20ABIDispatcherTrait};
+use openzeppelin::token::erc20::interface::{
+    IERC20MetadataDispatcher, IERC20MetadataDispatcherTrait
+};
 use openzeppelin::security::PausableComponent;
-use openzeppelin::upgrades::UpgradeableComponent;
+use openzeppelin::upgrades::{UpgradeableComponent};
+use openzeppelin::upgrades::interface::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
 
 const MINT_AMOUNT: u256 = 3;
 const REDEMPTION_SALT: felt252 = 0;
@@ -62,13 +66,16 @@ fn setup_redemption_contract() -> (IRedemptionDispatcher, ContractAddress, Contr
 
 #[test]
 fn owner_can_upgrade_token_contract() {
-    let (token_contract_dispatcher, token_contract_address, token_contract_owner_address) =
+    let (_token_contract_dispatcher, token_contract_address, token_contract_owner_address) =
         setup_token_contract();
     start_cheat_caller_address(token_contract_address, token_contract_owner_address);
     if let DeclareResult::Success(new_class) = declare("Redemption")
         .unwrap() { // would need to upgrade with a contract that has the same interface to be more realistic
         let mut spy = spy_events();
-        token_contract_dispatcher.upgrade(new_class.class_hash);
+        let token_contract_upgradeable_dispatcher = IUpgradeableDispatcher {
+            contract_address: token_contract_address
+        };
+        token_contract_upgradeable_dispatcher.upgrade(new_class.class_hash);
         spy
             .assert_emitted(
                 @array![
@@ -88,10 +95,13 @@ fn owner_can_upgrade_token_contract() {
 #[should_panic(expected: ('Caller is not the owner',))]
 #[test]
 fn non_owner_can_not_upgrade_token_contract() {
-    let (token_contract_dispatcher, _token_contract_address, _token_contract_owner_address) =
+    let (_token_contract_dispatcher, token_contract_address, _token_contract_owner_address) =
         setup_token_contract();
+    let token_contract_upgradeable_dispatcher = IUpgradeableDispatcher {
+        contract_address: token_contract_address
+    };
     if let DeclareResult::Success(new_class) = declare("Redemption").unwrap() {
-        token_contract_dispatcher.upgrade(new_class.class_hash);
+        token_contract_upgradeable_dispatcher.upgrade(new_class.class_hash);
     } else {
         panic!("Class declaration failed");
     }
@@ -100,7 +110,7 @@ fn non_owner_can_not_upgrade_token_contract() {
 #[test]
 fn admin_can_upgrade_permission_manager_contract() {
     let (
-        permission_manager_contract_dispatcher,
+        _permission_manager_contract_dispatcher,
         permission_manager_contract_address,
         permission_manager_contract_admin_address
     ) =
@@ -110,7 +120,10 @@ fn admin_can_upgrade_permission_manager_contract() {
     );
     if let DeclareResult::Success(new_class) = declare("Token").unwrap() { // same here
         let mut spy = spy_events();
-        permission_manager_contract_dispatcher.upgrade(new_class.class_hash);
+        let permission_manager_contract_upgradeable_dispatcher = IUpgradeableDispatcher {
+            contract_address: permission_manager_contract_address
+        };
+        permission_manager_contract_upgradeable_dispatcher.upgrade(new_class.class_hash);
         // check upgrading event
         spy
             .assert_emitted(
@@ -132,13 +145,16 @@ fn admin_can_upgrade_permission_manager_contract() {
 #[test]
 fn non_admin_can_not_upgrade_permission_manager_contract() {
     let (
-        permission_manager_contract_dispatcher,
-        _permission_manager_contract_address,
+        _permission_manager_contract_dispatcher,
+        permission_manager_contract_address,
         _permission_manager_contract_admin_address
     ) =
         setup_permission_manager_contract();
     if let DeclareResult::Success(new_class) = declare("Token").unwrap() { // same here
-        permission_manager_contract_dispatcher.upgrade(new_class.class_hash);
+        let permission_manager_contract_upgradeable_dispatcher = IUpgradeableDispatcher {
+            contract_address: permission_manager_contract_address
+        };
+        permission_manager_contract_upgradeable_dispatcher.upgrade(new_class.class_hash);
     } else {
         panic!("Class declaration failed");
     }
@@ -147,7 +163,7 @@ fn non_admin_can_not_upgrade_permission_manager_contract() {
 #[test]
 fn owner_can_upgrade_redemption_contract() {
     let (
-        redemption_contract_dispatcher,
+        _redemption_contract_dispatcher,
         redemption_contract_address,
         redemption_contract_owner_address
     ) =
@@ -155,7 +171,10 @@ fn owner_can_upgrade_redemption_contract() {
     start_cheat_caller_address(redemption_contract_address, redemption_contract_owner_address);
     if let DeclareResult::Success(new_class) = declare("PermissionManager").unwrap() { // same here
         let mut spy = spy_events();
-        redemption_contract_dispatcher.upgrade(new_class.class_hash);
+        let redemption_contract_upgradeable_dispatcher = IUpgradeableDispatcher {
+            contract_address: redemption_contract_address
+        };
+        redemption_contract_upgradeable_dispatcher.upgrade(new_class.class_hash);
         // check upgrading event
         spy
             .assert_emitted(
@@ -177,13 +196,16 @@ fn owner_can_upgrade_redemption_contract() {
 #[test]
 fn non_owner_can_not_upgrade_redemption_contract() {
     let (
-        redemption_contract_dispatcher,
-        _redemption_contract_address,
+        _redemption_contract_dispatcher,
+        redemption_contract_address,
         _redemption_contract_owner_address
     ) =
         setup_redemption_contract();
     if let DeclareResult::Success(new_class) = declare("PermissionManager").unwrap() { // same here
-        redemption_contract_dispatcher.upgrade(new_class.class_hash);
+        let redemption_contract_upgradeable_dispatcher = IUpgradeableDispatcher {
+            contract_address: redemption_contract_address
+        };
+        redemption_contract_upgradeable_dispatcher.upgrade(new_class.class_hash);
     } else {
         panic!("Class declaration failed");
     }
@@ -191,11 +213,14 @@ fn non_owner_can_not_upgrade_redemption_contract() {
 
 #[test]
 fn can_set_name_symbol_and_decimals() {
-    let (token_contract_dispatcher, _token_contract_address, _token_contract_owner_address) =
+    let (_token_contract_dispatcher, token_contract_address, _token_contract_owner_address) =
         setup_token_contract();
-    let token_name = token_contract_dispatcher.name();
-    let token_symbol = token_contract_dispatcher.symbol();
-    let token_decimals = token_contract_dispatcher.decimals();
+    let token_contract_metadata_dispatcher = IERC20MetadataDispatcher {
+        contract_address: token_contract_address
+    };
+    let token_name = token_contract_metadata_dispatcher.name();
+    let token_symbol = token_contract_metadata_dispatcher.symbol();
+    let token_decimals = token_contract_metadata_dispatcher.decimals();
     assert!(token_name == "MyToken", "Wrong token name");
     assert!(token_symbol == "TK", "Wrong token symbol");
     assert!(token_decimals == TOKEN_DECIMALS, "Wrong token decimals");
@@ -258,9 +283,12 @@ fn minter_whitelisted_by_whitelister_can_mint_token() {
             ]
         );
 
-    let owner_balance = token_contract_dispatcher.balance_of(receiver_address);
+        let token_contract_erc20_dispatcher = ERC20ABIDispatcher {
+            contract_address: token_contract_address
+        };
+    let owner_balance = token_contract_erc20_dispatcher.balance_of(receiver_address);
     assert!(owner_balance == MINT_AMOUNT, "Invalid balance");
-    assert!(token_contract_dispatcher.total_supply() == MINT_AMOUNT, "Invalid total supply");
+    assert!(token_contract_erc20_dispatcher.total_supply() == MINT_AMOUNT, "Invalid total supply");
 }
 
 #[test]
@@ -322,28 +350,31 @@ fn minters_whitelisted_by_whitelister_can_transfer_each_other_tokens() {
             ]
         );
 
-    let receiver_1_balance = token_contract_dispatcher.balance_of(receiver_address_1);
+    let token_contract_erc20_dispatcher = ERC20ABIDispatcher {
+        contract_address: token_contract_address
+    };
+    let receiver_1_balance = token_contract_erc20_dispatcher.balance_of(receiver_address_1);
     assert!(receiver_1_balance == MINT_AMOUNT, "Invalid balance");
-    assert!(token_contract_dispatcher.total_supply() == MINT_AMOUNT, "Invalid total supply");
+    assert!(token_contract_erc20_dispatcher.total_supply() == MINT_AMOUNT, "Invalid total supply");
 
     // transfer tokens from receiver 1 to receiver 2
     start_cheat_caller_address(token_contract_address, receiver_address_1);
-    token_contract_dispatcher.transfer(receiver_address_2, MINT_AMOUNT);
+    token_contract_erc20_dispatcher.transfer(receiver_address_2, MINT_AMOUNT);
     stop_cheat_caller_address(token_contract_address);
 
-    let receiver_1_balance = token_contract_dispatcher.balance_of(receiver_address_1);
+    let receiver_1_balance = token_contract_erc20_dispatcher.balance_of(receiver_address_1);
     assert!(receiver_1_balance == 0, "Invalid balance");
-    let receiver_2_balance = token_contract_dispatcher.balance_of(receiver_address_2);
+    let receiver_2_balance = token_contract_erc20_dispatcher.balance_of(receiver_address_2);
     assert!(receiver_2_balance == MINT_AMOUNT, "Invalid balance");
 
     // transfer tokens from receiver 2 to receiver 1
     start_cheat_caller_address(token_contract_address, receiver_address_2);
-    token_contract_dispatcher.transfer(receiver_address_1, MINT_AMOUNT);
+    token_contract_erc20_dispatcher.transfer(receiver_address_1, MINT_AMOUNT);
     stop_cheat_caller_address(token_contract_address);
 
-    let receiver_1_balance = token_contract_dispatcher.balance_of(receiver_address_1);
+    let receiver_1_balance = token_contract_erc20_dispatcher.balance_of(receiver_address_1);
     assert!(receiver_1_balance == MINT_AMOUNT, "Invalid balance");
-    let receiver_2_balance = token_contract_dispatcher.balance_of(receiver_address_2);
+    let receiver_2_balance = token_contract_erc20_dispatcher.balance_of(receiver_address_2);
     assert!(receiver_2_balance == 0, "Invalid balance");
 }
 
@@ -391,13 +422,17 @@ fn minter_whitelisted_by_whitelister_can_not_transfer_tokens_to_non_whitelisted_
     token_contract_dispatcher.mint(receiver_address_1, MINT_AMOUNT);
     stop_cheat_caller_address(token_contract_address);
 
-    let receiver_1_balance = token_contract_dispatcher.balance_of(receiver_address_1);
+    let token_contract_erc20_dispatcher = ERC20ABIDispatcher {
+        contract_address: token_contract_address
+    };
+
+    let receiver_1_balance = token_contract_erc20_dispatcher.balance_of(receiver_address_1);
     assert!(receiver_1_balance == MINT_AMOUNT, "Invalid balance");
-    assert!(token_contract_dispatcher.total_supply() == MINT_AMOUNT, "Invalid total supply");
+    assert!(token_contract_erc20_dispatcher.total_supply() == MINT_AMOUNT, "Invalid total supply");
 
     // transfer tokens from receiver 1 to receiver 2
     start_cheat_caller_address(token_contract_address, receiver_address_1);
-    token_contract_dispatcher.transfer(receiver_address_2, MINT_AMOUNT);
+    token_contract_erc20_dispatcher.transfer(receiver_address_2, MINT_AMOUNT);
 }
 
 
@@ -601,7 +636,10 @@ fn minter_can_not_mint_token_if_paused() {
 
     start_cheat_caller_address(token_contract_address, minter_address);
     token_contract_dispatcher.mint(receiver_address, MINT_AMOUNT);
-    let receiver_balance = token_contract_dispatcher.balance_of(receiver_address);
+    let token_contract_erc20_dispatcher = ERC20ABIDispatcher {
+        contract_address: token_contract_address
+    };
+    let receiver_balance = token_contract_erc20_dispatcher.balance_of(receiver_address);
     assert!(receiver_balance == MINT_AMOUNT, "Invalid balance");
     stop_cheat_caller_address(token_contract_address);
 }
@@ -661,11 +699,14 @@ fn minter_can_redeem_with_redemption_executed_by_executor() {
     // mint tokens + check tokens have been minted
     start_cheat_caller_address(token_contract_address, minter_address);
     token_contract_dispatcher.mint(receiver_address, MINT_AMOUNT);
+    let token_contract_erc20_dispatcher = ERC20ABIDispatcher {
+        contract_address: token_contract_address
+    };
     assert!(
-        token_contract_dispatcher.balance_of(receiver_address) == MINT_AMOUNT,
+        token_contract_erc20_dispatcher.balance_of(receiver_address) == MINT_AMOUNT,
         "Invalid owner balance"
     );
-    assert!(token_contract_dispatcher.total_supply() == MINT_AMOUNT, "Invalid total supply");
+    assert!(token_contract_erc20_dispatcher.total_supply() == MINT_AMOUNT, "Invalid total supply");
     stop_cheat_caller_address(token_contract_address);
 
     // check minting event
@@ -686,9 +727,11 @@ fn minter_can_redeem_with_redemption_executed_by_executor() {
     // redeem tokens + check tokens have been transferred
     start_cheat_caller_address(token_contract_address, receiver_address);
     token_contract_dispatcher.redeem(MINT_AMOUNT, REDEMPTION_SALT);
-    assert!(token_contract_dispatcher.balance_of(receiver_address) == 0, "Invalid owner balance");
     assert!(
-        token_contract_dispatcher.balance_of(redemption_contract_address) == MINT_AMOUNT,
+        token_contract_erc20_dispatcher.balance_of(receiver_address) == 0, "Invalid owner balance"
+    );
+    assert!(
+        token_contract_erc20_dispatcher.balance_of(redemption_contract_address) == MINT_AMOUNT,
         "Invalid owner balance"
     );
     stop_cheat_caller_address(token_contract_address);
@@ -783,7 +826,7 @@ fn minter_can_redeem_with_redemption_executed_by_executor() {
             ]
         );
 
-    assert!(token_contract_dispatcher.total_supply() == 0, "Invalid total supply");
+    assert!(token_contract_erc20_dispatcher.total_supply() == 0, "Invalid total supply");
 }
 
 #[should_panic(expected: "Redemption is not pending")]
@@ -840,19 +883,24 @@ fn redemption_can_not_be_executed_twice() {
     // mint tokens + check tokens have been minted
     start_cheat_caller_address(token_contract_address, minter_address);
     token_contract_dispatcher.mint(receiver_address, MINT_AMOUNT);
+    let token_contract_erc20_dispatcher = ERC20ABIDispatcher {
+        contract_address: token_contract_address
+    };
     assert!(
-        token_contract_dispatcher.balance_of(receiver_address) == MINT_AMOUNT,
+        token_contract_erc20_dispatcher.balance_of(receiver_address) == MINT_AMOUNT,
         "Invalid owner balance"
     );
-    assert!(token_contract_dispatcher.total_supply() == MINT_AMOUNT, "Invalid total supply");
+    assert!(token_contract_erc20_dispatcher.total_supply() == MINT_AMOUNT, "Invalid total supply");
     stop_cheat_caller_address(token_contract_address);
 
     // redeem tokens + check tokens have been transferred
     start_cheat_caller_address(token_contract_address, receiver_address);
     token_contract_dispatcher.redeem(MINT_AMOUNT, REDEMPTION_SALT);
-    assert!(token_contract_dispatcher.balance_of(receiver_address) == 0, "Invalid owner balance");
     assert!(
-        token_contract_dispatcher.balance_of(redemption_contract_address) == MINT_AMOUNT,
+        token_contract_erc20_dispatcher.balance_of(receiver_address) == 0, "Invalid owner balance"
+    );
+    assert!(
+        token_contract_erc20_dispatcher.balance_of(redemption_contract_address) == MINT_AMOUNT,
         "Invalid owner balance"
     );
     stop_cheat_caller_address(token_contract_address);
@@ -886,6 +934,9 @@ fn non_executor_can_not_execute_redemption() {
         redemption_contract_owner_address
     ) =
         setup_redemption_contract();
+    let token_contract_erc20_dispatcher = ERC20ABIDispatcher {
+        contract_address: token_contract_address
+    };
 
     // set redemption / permission manager contract addresses
     start_cheat_caller_address(token_contract_address, token_contract_owner_address);
@@ -920,18 +971,20 @@ fn non_executor_can_not_execute_redemption() {
     start_cheat_caller_address(token_contract_address, minter_address);
     token_contract_dispatcher.mint(receiver_address, MINT_AMOUNT);
     assert!(
-        token_contract_dispatcher.balance_of(receiver_address) == MINT_AMOUNT,
+        token_contract_erc20_dispatcher.balance_of(receiver_address) == MINT_AMOUNT,
         "Invalid owner balance"
     );
-    assert!(token_contract_dispatcher.total_supply() == MINT_AMOUNT, "Invalid total supply");
+    assert!(token_contract_erc20_dispatcher.total_supply() == MINT_AMOUNT, "Invalid total supply");
     stop_cheat_caller_address(token_contract_address);
 
     // redeem tokens + check tokens have been transferred
     start_cheat_caller_address(token_contract_address, receiver_address);
     token_contract_dispatcher.redeem(MINT_AMOUNT, REDEMPTION_SALT);
-    assert!(token_contract_dispatcher.balance_of(receiver_address) == 0, "Invalid owner balance");
     assert!(
-        token_contract_dispatcher.balance_of(redemption_contract_address) == MINT_AMOUNT,
+        token_contract_erc20_dispatcher.balance_of(receiver_address) == 0, "Invalid owner balance"
+    );
+    assert!(
+        token_contract_erc20_dispatcher.balance_of(redemption_contract_address) == MINT_AMOUNT,
         "Invalid owner balance"
     );
     stop_cheat_caller_address(token_contract_address);
@@ -993,11 +1046,14 @@ fn minter_can_redeem_with_redemption_canceled_by_executor() {
     // mint tokens + check tokens have been minted
     start_cheat_caller_address(token_contract_address, minter_address);
     token_contract_dispatcher.mint(receiver_address, MINT_AMOUNT);
+    let token_contract_erc20_dispatcher = ERC20ABIDispatcher {
+        contract_address: token_contract_address
+    };
     assert!(
-        token_contract_dispatcher.balance_of(receiver_address) == MINT_AMOUNT,
+        token_contract_erc20_dispatcher.balance_of(receiver_address) == MINT_AMOUNT,
         "Invalid owner balance"
     );
-    assert!(token_contract_dispatcher.total_supply() == MINT_AMOUNT, "Invalid total supply");
+    assert!(token_contract_erc20_dispatcher.total_supply() == MINT_AMOUNT, "Invalid total supply");
     stop_cheat_caller_address(token_contract_address);
 
     // check minting event
@@ -1018,9 +1074,11 @@ fn minter_can_redeem_with_redemption_canceled_by_executor() {
     // redeem tokens + check tokens have been transferred
     start_cheat_caller_address(token_contract_address, receiver_address);
     token_contract_dispatcher.redeem(MINT_AMOUNT, REDEMPTION_SALT);
-    assert!(token_contract_dispatcher.balance_of(receiver_address) == 0, "Invalid owner balance");
     assert!(
-        token_contract_dispatcher.balance_of(redemption_contract_address) == MINT_AMOUNT,
+        token_contract_erc20_dispatcher.balance_of(receiver_address) == 0, "Invalid owner balance"
+    );
+    assert!(
+        token_contract_erc20_dispatcher.balance_of(redemption_contract_address) == MINT_AMOUNT,
         "Invalid owner balance"
     );
     stop_cheat_caller_address(token_contract_address);
@@ -1116,10 +1174,10 @@ fn minter_can_redeem_with_redemption_canceled_by_executor() {
         );
 
     assert!(
-        token_contract_dispatcher.balance_of(receiver_address) == MINT_AMOUNT,
+        token_contract_erc20_dispatcher.balance_of(receiver_address) == MINT_AMOUNT,
         "Invalid owner balance"
     );
-    assert!(token_contract_dispatcher.total_supply() == MINT_AMOUNT, "Invalid total supply");
+    assert!(token_contract_erc20_dispatcher.total_supply() == MINT_AMOUNT, "Invalid total supply");
 }
 
 #[should_panic(expected: "Redemption is not pending")]
@@ -1174,19 +1232,24 @@ fn redemption_can_not_be_canceled_twice() {
     // mint tokens + check tokens have been minted
     start_cheat_caller_address(token_contract_address, minter_address);
     token_contract_dispatcher.mint(receiver_address, MINT_AMOUNT);
+    let token_contract_erc20_dispatcher = ERC20ABIDispatcher {
+        contract_address: token_contract_address
+    };
     assert!(
-        token_contract_dispatcher.balance_of(receiver_address) == MINT_AMOUNT,
+        token_contract_erc20_dispatcher.balance_of(receiver_address) == MINT_AMOUNT,
         "Invalid owner balance"
     );
-    assert!(token_contract_dispatcher.total_supply() == MINT_AMOUNT, "Invalid total supply");
+    assert!(token_contract_erc20_dispatcher.total_supply() == MINT_AMOUNT, "Invalid total supply");
     stop_cheat_caller_address(token_contract_address);
 
     // redeem tokens + check tokens have been transferred
     start_cheat_caller_address(token_contract_address, receiver_address);
     token_contract_dispatcher.redeem(MINT_AMOUNT, REDEMPTION_SALT);
-    assert!(token_contract_dispatcher.balance_of(receiver_address) == 0, "Invalid owner balance");
     assert!(
-        token_contract_dispatcher.balance_of(redemption_contract_address) == MINT_AMOUNT,
+        token_contract_erc20_dispatcher.balance_of(receiver_address) == 0, "Invalid owner balance"
+    );
+    assert!(
+        token_contract_erc20_dispatcher.balance_of(redemption_contract_address) == MINT_AMOUNT,
         "Invalid owner balance"
     );
     stop_cheat_caller_address(token_contract_address);
@@ -1252,19 +1315,24 @@ fn non_executor_can_not_cancel_redemption() {
     // mint tokens + check tokens have been minted
     start_cheat_caller_address(token_contract_address, minter_address);
     token_contract_dispatcher.mint(receiver_address, MINT_AMOUNT);
+    let token_contract_erc20_dispatcher = ERC20ABIDispatcher {
+        contract_address: token_contract_address
+    };
     assert!(
-        token_contract_dispatcher.balance_of(receiver_address) == MINT_AMOUNT,
+        token_contract_erc20_dispatcher.balance_of(receiver_address) == MINT_AMOUNT,
         "Invalid owner balance"
     );
-    assert!(token_contract_dispatcher.total_supply() == MINT_AMOUNT, "Invalid total supply");
+    assert!(token_contract_erc20_dispatcher.total_supply() == MINT_AMOUNT, "Invalid total supply");
     stop_cheat_caller_address(token_contract_address);
 
     // redeem tokens + check tokens have been transferred
     start_cheat_caller_address(token_contract_address, receiver_address);
     token_contract_dispatcher.redeem(MINT_AMOUNT, REDEMPTION_SALT);
-    assert!(token_contract_dispatcher.balance_of(receiver_address) == 0, "Invalid owner balance");
     assert!(
-        token_contract_dispatcher.balance_of(redemption_contract_address) == MINT_AMOUNT,
+        token_contract_erc20_dispatcher.balance_of(receiver_address) == 0, "Invalid owner balance"
+    );
+    assert!(
+        token_contract_erc20_dispatcher.balance_of(redemption_contract_address) == MINT_AMOUNT,
         "Invalid owner balance"
     );
     stop_cheat_caller_address(token_contract_address);
@@ -1325,11 +1393,16 @@ fn can_not_initiate_redemption_with_same_arguments_twice() {
     start_cheat_caller_address(token_contract_address, minter_address);
     token_contract_dispatcher.mint(receiver_address, MINT_AMOUNT);
     token_contract_dispatcher.mint(receiver_address, MINT_AMOUNT);
+    let token_contract_erc20_dispatcher = ERC20ABIDispatcher {
+        contract_address: token_contract_address
+    };
     assert!(
-        token_contract_dispatcher.balance_of(receiver_address) == 2 * MINT_AMOUNT,
+        token_contract_erc20_dispatcher.balance_of(receiver_address) == 2 * MINT_AMOUNT,
         "Invalid owner balance"
     );
-    assert!(token_contract_dispatcher.total_supply() == 2 * MINT_AMOUNT, "Invalid total supply");
+    assert!(
+        token_contract_erc20_dispatcher.total_supply() == 2 * MINT_AMOUNT, "Invalid total supply"
+    );
     stop_cheat_caller_address(token_contract_address);
 
     // redeem tokens + check tokens have been transferred
