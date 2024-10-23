@@ -73,7 +73,7 @@ pub mod Redemption {
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::upgrades::UpgradeableComponent;
     use openzeppelin::upgrades::interface::IUpgradeable;
-    use starknet::{ClassHash, ContractAddress, get_block_timestamp, get_caller_address};
+    use starknet::{ClassHash, ContractAddress, get_caller_address};
     use starknet_contracts::{ITokenDispatcher, ITokenDispatcherTrait};
     use starknet_contracts::permission_manager::{
         IPermissionManagerDispatcher, IPermissionManagerDispatcherTrait
@@ -106,17 +106,11 @@ pub mod Redemption {
         Canceled
     }
 
-    #[derive(Copy, Drop, Serde, starknet::Store)]
-    struct RedemptionDetails {
-        status: RedemptionStatus,
-        deadline: u64,
-    }
-
     #[storage]
     struct Storage {
         token_contract_address: ContractAddress,
         permission_manager_contract_address: ContractAddress,
-        redemption_details: Map::<felt252, RedemptionDetails>,
+        redemption_statuses: Map::<felt252, RedemptionStatus>,
         #[substorage(v0)]
         ownable: OwnableComponent::Storage,
         #[substorage(v0)]
@@ -167,12 +161,10 @@ pub mod Redemption {
             "Caller should be token contract"
         );
         let redemption_data_hash: felt252 = hash_redemption_data(token, from, amount, salt);
-        let redemption_details = RedemptionDetails {
-            status: RedemptionStatus::Pending, deadline: get_block_timestamp()
-        };
-        let existing_redemption = self.redemption_details.read(redemption_data_hash);
-        assert!(existing_redemption.status == RedemptionStatus::Null, "Redemption already exists");
-        self.redemption_details.entry(redemption_data_hash).write(redemption_details);
+        let redemption_statuses =  RedemptionStatus::Pending;
+        let existing_redemption = self.redemption_statuses.read(redemption_data_hash);
+        assert!(existing_redemption == RedemptionStatus::Null, "Redemption already exists");
+        self.redemption_statuses.entry(redemption_data_hash).write(redemption_statuses);
         self
             .emit(
                 RedemptionInitiated {
@@ -200,10 +192,10 @@ pub mod Redemption {
     ) {
         check_address_has_role(ref self, REDEMPTION_EXECUTOR_ROLE, get_caller_address());
         let redemption_data_hash: felt252 = hash_redemption_data(token, from, amount, salt);
-        let mut redemption_data = self.redemption_details.entry(redemption_data_hash).read();
-        assert!(redemption_data.status == RedemptionStatus::Pending, "Redemption is not pending");
-        redemption_data.status = RedemptionStatus::Executed;
-        self.redemption_details.entry(redemption_data_hash).write(redemption_data);
+        let mut redemption_status = self.redemption_statuses.entry(redemption_data_hash).read();
+        assert!(redemption_status == RedemptionStatus::Pending, "Redemption is not pending");
+        redemption_status = RedemptionStatus::Executed;
+        self.redemption_statuses.entry(redemption_data_hash).write(redemption_status);
         let dispatcher = ITokenDispatcher { contract_address: self.token_contract_address.read() };
         dispatcher.burn(amount);
         self
@@ -224,10 +216,10 @@ pub mod Redemption {
     ) {
         check_address_has_role(ref self, REDEMPTION_EXECUTOR_ROLE, get_caller_address());
         let redemption_data_hash: felt252 = hash_redemption_data(token, from, amount, salt);
-        let mut redemption_data = self.redemption_details.entry(redemption_data_hash).read();
-        assert!(redemption_data.status == RedemptionStatus::Pending, "Redemption is not pending");
-        redemption_data.status = RedemptionStatus::Canceled;
-        self.redemption_details.entry(redemption_data_hash).write(redemption_data);
+        let mut redemption_status = self.redemption_statuses.entry(redemption_data_hash).read();
+        assert!(redemption_status == RedemptionStatus::Pending, "Redemption is not pending");
+        redemption_status = RedemptionStatus::Canceled;
+        self.redemption_statuses.entry(redemption_data_hash).write(redemption_status);
         let dispatcher = ITokenDispatcher { contract_address: self.token_contract_address.read() };
         dispatcher.transfer(from, amount);
         self
