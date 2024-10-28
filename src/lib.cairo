@@ -144,6 +144,7 @@ mod Token {
     #[external(v0)]
     fn redeem(ref self: ContractState, amount: u256, salt: felt252) {
         self.pausable.assert_not_paused();
+        assert!(amount > 0, "Redemption amount should be more than zero");
         let redemption_contract_address = self.redemption_contract_address.read();
         let redemption_dispatcher = IRedemptionDispatcher {
             contract_address: redemption_contract_address
