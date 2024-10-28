@@ -23,6 +23,7 @@ use openzeppelin::token::erc20::interface::{
 use openzeppelin::security::PausableComponent;
 use openzeppelin::upgrades::{UpgradeableComponent};
 use openzeppelin::upgrades::interface::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
+use openzeppelin::access::accesscontrol::interface::{IAccessControlDispatcher, IAccessControlDispatcherTrait};
 
 const MINT_AMOUNT: u256 = 3;
 const REDEMPTION_SALT: felt252 = 0;
@@ -158,6 +159,29 @@ fn non_admin_can_not_upgrade_permission_manager_contract() {
     } else {
         panic!("Class declaration failed");
     }
+}
+
+#[should_panic(
+    expected: "Cannot renounce whitelisted role"
+)]
+#[test]
+fn whitelisted_user_can_not_renounce_whitelisted_role() {
+    let (
+        _permission_manager_contract_dispatcher,
+        permission_manager_contract_address,
+        permission_manager_contract_admin_address
+    ) =
+        setup_permission_manager_contract();
+        let permission_manager_contract_access_control_dispatcher = IAccessControlDispatcher {
+            contract_address: permission_manager_contract_address
+        };
+        start_cheat_caller_address(permission_manager_contract_address, permission_manager_contract_admin_address);
+        let address_to_whitelist: ContractAddress = 002.try_into().unwrap();
+        permission_manager_contract_access_control_dispatcher.grant_role(WHITELISTER_ROLE, permission_manager_contract_admin_address);
+        permission_manager_contract_access_control_dispatcher.grant_role(WHITELISTED_ROLE, address_to_whitelist);
+        stop_cheat_caller_address(permission_manager_contract_address);
+        start_cheat_caller_address(permission_manager_contract_address, address_to_whitelist);
+        permission_manager_contract_access_control_dispatcher.renounce_role(WHITELISTED_ROLE, address_to_whitelist);
 }
 
 #[test]

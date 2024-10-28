@@ -16,12 +16,12 @@ pub mod PermissionManager {
     use openzeppelin::introspection::src5::SRC5Component;
     use starknet::{ClassHash, ContractAddress};
     use starknet_contracts::roles::{WHITELISTED_ROLE, WHITELISTER_ROLE};
+    use openzeppelin::access::accesscontrol::interface::{IAccessControl, IAccessControlCamel};
 
     component!(path: AccessControlComponent, storage: accesscontrol, event: AccessControlEvent);
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
     component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
 
-    #[abi(embed_v0)]
     impl AccessControlImpl =
         AccessControlComponent::AccessControlImpl<ContractState>;
     impl AccessControlInternalImpl = AccessControlComponent::InternalImpl<ContractState>;
@@ -64,6 +64,54 @@ pub mod PermissionManager {
         fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
             self.accesscontrol.assert_only_role(DEFAULT_ADMIN_ROLE);
             self.upgradeable.upgrade(new_class_hash);
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl CustomAccessControlImpl of IAccessControl<ContractState> {
+        fn has_role(self: @ContractState, role: felt252, account: ContractAddress) -> bool {
+            self.accesscontrol.has_role(role, account)
+        }
+
+        fn get_role_admin(self: @ContractState, role: felt252) -> felt252 {
+            self.accesscontrol.get_role_admin(role)
+        }
+
+        fn grant_role(ref self: ContractState, role: felt252, account: ContractAddress) {
+            self.accesscontrol.grant_role(role, account)
+        }
+
+        fn revoke_role(ref self: ContractState, role: felt252, account: ContractAddress) {
+            self.accesscontrol.revoke_role(role, account)
+        }
+
+        fn renounce_role(ref self: ContractState, role: felt252, account: ContractAddress) {
+            assert!(role != WHITELISTED_ROLE, "Cannot renounce whitelisted role");
+            self.accesscontrol.renounce_role(role, account)
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl CustomAccessControlCamelImpl of IAccessControlCamel<ContractState> {
+        fn hasRole(self: @ContractState, role: felt252, account: ContractAddress)-> bool {
+            self.accesscontrol.hasRole(role, account)
+        }
+
+        fn getRoleAdmin(self: @ContractState, role: felt252) -> felt252  {
+            self.accesscontrol.getRoleAdmin(role)
+        }
+
+        fn grantRole(ref self: ContractState, role: felt252, account: ContractAddress) {
+            self.accesscontrol.grantRole(role, account)
+        }
+
+        fn revokeRole(ref self: ContractState, role: felt252, account: ContractAddress) {
+            self.accesscontrol.revokeRole(role, account)
+        }
+
+        fn renounceRole(ref self: ContractState, role: felt252, account: ContractAddress) {
+            assert!(role != WHITELISTED_ROLE, "Cannot renounce whitelisted role");
+            self.accesscontrol.renounceRole(role, account)
         }
     }
 }
