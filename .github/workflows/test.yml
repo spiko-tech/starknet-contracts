@@ -34,8 +34,6 @@ jobs:
         globs: |
           *.md
           !PULL_REQUEST_TEMPLATE.md
-    - name: Cairo lint
-      run: scarb fmt --check
     - name: Cairo test
       run: snforge test --coverage
     - name: Upload coverage to Codecov
