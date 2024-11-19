@@ -25,7 +25,8 @@ pub trait IRedemption<TContractState> {
         amount: u256,
         salt: felt252
     );
-    fn set_token_contract_address(ref self: TContractState, contract_address: ContractAddress);
+    fn add_token_contract_address(ref self: TContractState, contract_address: ContractAddress);
+    fn remove_token_contract_address(ref self: TContractState, contract_address: ContractAddress);
     fn set_permission_manager_contract_address(
         ref self: TContractState, contract_address: ContractAddress
     );
@@ -108,7 +109,7 @@ pub mod Redemption {
 
     #[storage]
     struct Storage {
-        token_contract_address: ContractAddress,
+        token_contract_addresses: Map::<ContractAddress, bool>,
         permission_manager_contract_address: ContractAddress,
         redemption_statuses: Map::<felt252, RedemptionStatus>,
         #[substorage(v0)]
@@ -135,9 +136,17 @@ pub mod Redemption {
     }
 
     #[external(v0)]
-    fn set_token_contract_address(ref self: ContractState, contract_address: ContractAddress) {
+    fn add_token_contract_address(ref self: ContractState, contract_address: ContractAddress) {
         self.ownable.assert_only_owner();
-        self.token_contract_address.write(contract_address);
+        assert!(self.token_contract_addresses.read(contract_address) != true, "Contract address is already allowed");
+        self.token_contract_addresses.entry(contract_address).write(true);
+    }
+
+    #[external(v0)]
+    fn remove_token_contract_address(ref self: ContractState, contract_address: ContractAddress) {
+        self.ownable.assert_only_owner();
+        assert!(self.token_contract_addresses.read(contract_address) == true, "Contract address is not allowed");
+        self.token_contract_addresses.entry(contract_address).write(false);
     }
 
     #[external(v0)]
@@ -157,7 +166,7 @@ pub mod Redemption {
         salt: felt252
     ) {
         assert!(
-            get_caller_address() == self.token_contract_address.read(),
+            self.token_contract_addresses.read(get_caller_address()) == true,
             "Caller should be token contract"
         );
         let redemption_data_hash: felt252 = hash_redemption_data(token, from, amount, salt);
@@ -196,7 +205,7 @@ pub mod Redemption {
         assert!(redemption_status == RedemptionStatus::Pending, "Redemption is not pending");
         redemption_status = RedemptionStatus::Executed;
         self.redemption_statuses.entry(redemption_data_hash).write(redemption_status);
-        let dispatcher = ITokenDispatcher { contract_address: self.token_contract_address.read() };
+        let dispatcher = ITokenDispatcher { contract_address: token };
         dispatcher.burn(amount);
         self
             .emit(
@@ -221,7 +230,7 @@ pub mod Redemption {
         redemption_status = RedemptionStatus::Canceled;
         self.redemption_statuses.entry(redemption_data_hash).write(redemption_status);
         let dispatcher = ERC20ABIDispatcher {
-            contract_address: self.token_contract_address.read()
+            contract_address: token
         };
         dispatcher.transfer(from, amount);
         self
