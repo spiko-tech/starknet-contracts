@@ -842,7 +842,8 @@ fn minter_can_redeem_with_redemption_executed_by_executor() {
                             data: RedemptionData {
                                 token: token_contract_address,
                                 from: receiver_address,
-                                amount: MINT_AMOUNT
+                                amount: MINT_AMOUNT,
+                                salt: REDEMPTION_SALT
                             },
                             hash: hash_redemption_data(
                                 token_contract_address,
@@ -890,7 +891,8 @@ fn minter_can_redeem_with_redemption_executed_by_executor() {
                             data: RedemptionData {
                                 token: token_contract_address,
                                 from: receiver_address,
-                                amount: MINT_AMOUNT
+                                amount: MINT_AMOUNT,
+                                salt: REDEMPTION_SALT
                             },
                             hash: hash_redemption_data(
                                 token_contract_address,
@@ -1189,7 +1191,8 @@ fn minter_can_redeem_with_redemption_canceled_by_executor() {
                             data: RedemptionData {
                                 token: token_contract_address,
                                 from: receiver_address,
-                                amount: MINT_AMOUNT
+                                amount: MINT_AMOUNT,
+                                salt: REDEMPTION_SALT
                             },
                             hash: hash_redemption_data(
                                 token_contract_address,
@@ -1237,7 +1240,8 @@ fn minter_can_redeem_with_redemption_canceled_by_executor() {
                             data: RedemptionData {
                                 token: token_contract_address,
                                 from: receiver_address,
-                                amount: MINT_AMOUNT
+                                amount: MINT_AMOUNT,
+                                salt: REDEMPTION_SALT
                             },
                             hash: hash_redemption_data(
                                 token_contract_address,

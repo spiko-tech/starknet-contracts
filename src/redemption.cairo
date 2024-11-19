@@ -37,6 +37,7 @@ pub struct RedemptionData {
     pub token: ContractAddress,
     pub from: ContractAddress,
     pub amount: u256,
+    pub salt: felt252,
 }
 
 #[derive(Drop, starknet::Event)]
@@ -63,7 +64,7 @@ pub struct RedemptionCanceled {
 pub fn hash_redemption_data(
     token: ContractAddress, from: ContractAddress, amount: u256, salt: felt252
 ) -> felt252 {
-    let redemption_data = RedemptionData { token, from, amount };
+    let redemption_data = RedemptionData { token, from, amount, salt };
     PedersenTrait::new(salt).update_with(redemption_data).finalize()
 }
 
@@ -177,7 +178,7 @@ pub mod Redemption {
         self
             .emit(
                 RedemptionInitiated {
-                    hash: redemption_data_hash, data: RedemptionData { token, from, amount }
+                    hash: redemption_data_hash, data: RedemptionData { token, from, amount, salt }
                 }
             );
     }
@@ -210,7 +211,7 @@ pub mod Redemption {
         self
             .emit(
                 RedemptionExecuted {
-                    hash: redemption_data_hash, data: RedemptionData { token, from, amount }
+                    hash: redemption_data_hash, data: RedemptionData { token, from, amount, salt }
                 }
             );
     }
@@ -236,7 +237,7 @@ pub mod Redemption {
         self
             .emit(
                 RedemptionCanceled {
-                    hash: redemption_data_hash, data: RedemptionData { token, from, amount }
+                    hash: redemption_data_hash, data: RedemptionData { token, from, amount, salt }
                 }
             );
     }
