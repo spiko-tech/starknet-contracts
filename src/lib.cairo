@@ -19,9 +19,10 @@ pub trait IToken<TContractState> {
 
 #[starknet::contract]
 mod Token {
+    use openzeppelin_token::erc20::interface::IERC20;
     use OwnableComponent::InternalTrait;
     use openzeppelin::token::erc20::{ERC20Component};
-    use openzeppelin::token::erc20::interface::IERC20Metadata;
+    use openzeppelin::token::erc20::interface::{IERC20Metadata};
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::security::PausableComponent;
     use openzeppelin::upgrades::UpgradeableComponent;
@@ -42,6 +43,9 @@ mod Token {
     #[abi(embed_v0)]
     impl ERC20Impl = ERC20Component::ERC20Impl<ContractState>;
     impl ERC20InternalImpl = ERC20Component::InternalImpl<ContractState>;
+
+    #[abi(embed_v0)]
+    impl ERC20CamelImpl = ERC20Component::ERC20CamelOnlyImpl<ContractState>;
 
     #[abi(embed_v0)]
     impl OwnableTwoStepMixinImpl = OwnableComponent::OwnableTwoStepMixinImpl<ContractState>;
