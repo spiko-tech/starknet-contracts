@@ -22,8 +22,7 @@ pub mod PermissionManager {
     component!(path: SRC5Component, storage: src5, event: SRC5Event);
     component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
 
-    impl AccessControlImpl =
-        AccessControlComponent::AccessControlImpl<ContractState>;
+    impl AccessControlImpl = AccessControlComponent::AccessControlImpl<ContractState>;
     impl AccessControlInternalImpl = AccessControlComponent::InternalImpl<ContractState>;
 
     #[abi(embed_v0)]
@@ -93,11 +92,11 @@ pub mod PermissionManager {
 
     #[abi(embed_v0)]
     impl CustomAccessControlCamelImpl of IAccessControlCamel<ContractState> {
-        fn hasRole(self: @ContractState, role: felt252, account: ContractAddress)-> bool {
+        fn hasRole(self: @ContractState, role: felt252, account: ContractAddress) -> bool {
             self.accesscontrol.hasRole(role, account)
         }
 
-        fn getRoleAdmin(self: @ContractState, role: felt252) -> felt252  {
+        fn getRoleAdmin(self: @ContractState, role: felt252) -> felt252 {
             self.accesscontrol.getRoleAdmin(role)
         }
 

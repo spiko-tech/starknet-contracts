@@ -23,7 +23,9 @@ use openzeppelin::token::erc20::interface::{
 use openzeppelin::security::PausableComponent;
 use openzeppelin::upgrades::{UpgradeableComponent};
 use openzeppelin::upgrades::interface::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
-use openzeppelin::access::accesscontrol::interface::{IAccessControlDispatcher, IAccessControlDispatcherTrait};
+use openzeppelin::access::accesscontrol::interface::{
+    IAccessControlDispatcher, IAccessControlDispatcherTrait
+};
 
 const MINT_AMOUNT: u256 = 3;
 const REDEMPTION_SALT: felt252 = 0;
@@ -161,9 +163,7 @@ fn non_admin_can_not_upgrade_permission_manager_contract() {
     }
 }
 
-#[should_panic(
-    expected: "Cannot renounce whitelisted role"
-)]
+#[should_panic(expected: "Cannot renounce whitelisted role")]
 #[test]
 fn whitelisted_user_can_not_renounce_whitelisted_role() {
     let (
@@ -172,16 +172,21 @@ fn whitelisted_user_can_not_renounce_whitelisted_role() {
         permission_manager_contract_admin_address
     ) =
         setup_permission_manager_contract();
-        let permission_manager_contract_access_control_dispatcher = IAccessControlDispatcher {
-            contract_address: permission_manager_contract_address
-        };
-        start_cheat_caller_address(permission_manager_contract_address, permission_manager_contract_admin_address);
-        let address_to_whitelist: ContractAddress = 002.try_into().unwrap();
-        permission_manager_contract_access_control_dispatcher.grant_role(WHITELISTER_ROLE, permission_manager_contract_admin_address);
-        permission_manager_contract_access_control_dispatcher.grant_role(WHITELISTED_ROLE, address_to_whitelist);
-        stop_cheat_caller_address(permission_manager_contract_address);
-        start_cheat_caller_address(permission_manager_contract_address, address_to_whitelist);
-        permission_manager_contract_access_control_dispatcher.renounce_role(WHITELISTED_ROLE, address_to_whitelist);
+    let permission_manager_contract_access_control_dispatcher = IAccessControlDispatcher {
+        contract_address: permission_manager_contract_address
+    };
+    start_cheat_caller_address(
+        permission_manager_contract_address, permission_manager_contract_admin_address
+    );
+    let address_to_whitelist: ContractAddress = 002.try_into().unwrap();
+    permission_manager_contract_access_control_dispatcher
+        .grant_role(WHITELISTER_ROLE, permission_manager_contract_admin_address);
+    permission_manager_contract_access_control_dispatcher
+        .grant_role(WHITELISTED_ROLE, address_to_whitelist);
+    stop_cheat_caller_address(permission_manager_contract_address);
+    start_cheat_caller_address(permission_manager_contract_address, address_to_whitelist);
+    permission_manager_contract_access_control_dispatcher
+        .renounce_role(WHITELISTED_ROLE, address_to_whitelist);
 }
 
 #[test]
@@ -307,9 +312,9 @@ fn minter_whitelisted_by_whitelister_can_mint_token() {
             ]
         );
 
-        let token_contract_erc20_dispatcher = ERC20ABIDispatcher {
-            contract_address: token_contract_address
-        };
+    let token_contract_erc20_dispatcher = ERC20ABIDispatcher {
+        contract_address: token_contract_address
+    };
     let owner_balance = token_contract_erc20_dispatcher.balance_of(receiver_address);
     assert!(owner_balance == MINT_AMOUNT, "Invalid balance");
     assert!(token_contract_erc20_dispatcher.total_supply() == MINT_AMOUNT, "Invalid total supply");
@@ -668,9 +673,7 @@ fn minter_can_not_mint_token_if_paused() {
     stop_cheat_caller_address(token_contract_address);
 }
 
-#[should_panic(
-    expected: "Redemption amount should be more than zero"
-)]
+#[should_panic(expected: "Redemption amount should be more than zero")]
 #[test]
 fn minter_can_not_redeem_zero_amount() {
     // deploy contracts

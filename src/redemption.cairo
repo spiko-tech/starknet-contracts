@@ -94,7 +94,8 @@ pub mod Redemption {
     component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
 
     #[abi(embed_v0)]
-    impl OwnableTwoStepMixinImpl = OwnableComponent::OwnableTwoStepMixinImpl<ContractState>;
+    impl OwnableTwoStepMixinImpl =
+        OwnableComponent::OwnableTwoStepMixinImpl<ContractState>;
     impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
 
     impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
@@ -139,14 +140,20 @@ pub mod Redemption {
     #[external(v0)]
     fn add_token_contract_address(ref self: ContractState, contract_address: ContractAddress) {
         self.ownable.assert_only_owner();
-        assert!(self.token_contract_addresses.read(contract_address) != true, "Contract address is already allowed");
+        assert!(
+            self.token_contract_addresses.read(contract_address) != true,
+            "Contract address is already allowed"
+        );
         self.token_contract_addresses.entry(contract_address).write(true);
     }
 
     #[external(v0)]
     fn remove_token_contract_address(ref self: ContractState, contract_address: ContractAddress) {
         self.ownable.assert_only_owner();
-        assert!(self.token_contract_addresses.read(contract_address) == true, "Contract address is not allowed");
+        assert!(
+            self.token_contract_addresses.read(contract_address) == true,
+            "Contract address is not allowed"
+        );
         self.token_contract_addresses.entry(contract_address).write(false);
     }
 
@@ -230,9 +237,7 @@ pub mod Redemption {
         assert!(redemption_status == RedemptionStatus::Pending, "Redemption is not pending");
         redemption_status = RedemptionStatus::Canceled;
         self.redemption_statuses.entry(redemption_data_hash).write(redemption_status);
-        let dispatcher = ERC20ABIDispatcher {
-            contract_address: token
-        };
+        let dispatcher = ERC20ABIDispatcher { contract_address: token };
         dispatcher.transfer(from, amount);
         self
             .emit(
