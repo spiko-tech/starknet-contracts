@@ -9,3 +9,6 @@ snfoundry.toml
 snfoundry_trace/
 cmd_line
 coverage/
+node_modules/
+dist/
+.env

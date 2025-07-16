@@ -48,6 +48,7 @@ wish to sell their fund shares back.
 **Workflow**:
 
 1. **Initiation**:
+
    - Users call the `redeem` function in `lib.cairo`,
      transferring their tokens to the `redemption.cairo`
      contract.
@@ -149,6 +150,12 @@ First, [setup
 sncast](https://foundry-rs.github.io/starknet-foundry/projects/configuration.html#sncast)
 by creating a local `snfoundry.toml` file.
 
+You can register your Argent account into `sncast` as follow:
+
+```bash
+sncast account import --name account_argent --address ADDRESS --private-key PRIVATE_KEY --type argent --url RPC --add-profile account_argent
+```
+
 Then, declare each contract as follows:
 
 ```bash
@@ -188,4 +195,4 @@ above:
 ```bash
  sncast --profile account1 invoke --contract-address <CONTRACT_ADDRESS>
  --function "<FUNCTION_NAME>" --calldata <FUNCTION_CALLDATA> --fee-token strk
- ```
+```
