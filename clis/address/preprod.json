@@ -1,0 +1,12 @@
+{
+  "permissionManager": "0x001e145a679fd08cab345ef6673f02dc3a500599d359c1a83cd0d9a394a4c12a",
+  "redemption": "0x051dd5772b95c5cf234552bf8fd69bf45a02182ec9658a4451aee7d2e8e9ea45",
+  "tokens": {
+    "EUTBL": "0x0103b499885b117eaa52c5d7f5675ecd7b378983a36203362e5b9439adbfa5a3",
+    "USTBL": "0x0644cde05c78a12f5a3c71ab3fd87151db57a74c8db06442228d9c15b161c8ba",
+    "eurUSTBL": "0x0561f66b213c7d88b2ed5f995a3eb7cb4ad5dd811a86e3142e488eabfac9d0df",
+    "UKTBL": "0x07df004ca9c723828ab4b6659bf8283c472b45df19d475c965f72fecef5c04bc",
+    "SPKCC": "0x06d140af7fb834a0eab85e86c8d5ddf7201b6dc76cd3bc5432fdc2bf0e78faf5",
+    "eurSPKCC": "0x0775eaea90669a05d182c28c768269074e4e89beea35f5ac57330af00e18b268"
+  }
+}

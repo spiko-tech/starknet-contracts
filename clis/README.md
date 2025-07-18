@@ -1,5 +1,7 @@
 ### Craft token contract deployment call data
 
+To deploy a contract, you need to format the constructor parameter (calldata) in the appropriate way.
+
 You can generate the call data of the token deployment like that:
 
 ```bash
