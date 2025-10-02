@@ -153,7 +153,8 @@ by creating a local `snfoundry.toml` file.
 You can register your Argent account into `sncast` as follow:
 
 ```bash
-sncast account import --name account_argent --address ADDRESS --private-key PRIVATE_KEY --type argent --url RPC --add-profile account_argent
+sncast account import --name account_argent --address ADDRESS \
+  --private-key PRIVATE_KEY --type argent --url RPC --add-profile account_argent
 ```
 
 Then, declare each contract as follows:
