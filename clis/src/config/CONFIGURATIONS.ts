@@ -42,6 +42,7 @@ export const CONFIGURATIONS: Record<Environment, Configuration> = {
   production: {
     tokens: [
       { name: 'Spiko UK T-Bills Money Market Fund', symbol: 'UKTBL', decimals: 5 },
+      { name: 'Spiko UK T-Bills Money Market Fund (EUR)', symbol: 'eurUKTBL', decimals: 5 },
       { name: 'Spiko Digital Assets Cash and Carry Fund', symbol: 'SPKCC', decimals: 5 },
       { name: 'Spiko Digital Assets Cash and Carry Fund (EUR hedged)', symbol: 'eurSPKCC', decimals: 5 },
     ],
