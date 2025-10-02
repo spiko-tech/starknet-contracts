@@ -3,6 +3,15 @@
 ![lint and test](https://github.com/spiko-tech/starknet-contracts/actions/workflows/test.yml/badge.svg)
 [![codecov](https://codecov.io/github/spiko-tech/starknet-contracts/graph/badge.svg?token=311N4K6AM3)](https://codecov.io/github/spiko-tech/starknet-contracts)
 
+## Installation
+
+- Install Rust
+- Install asdf
+- Install Scarb with the correct version (see [Scarb.toml](Scarb.toml))
+- Install Starknet Foundry and Universal Sierra Compiler
+- Create a file `snfoundry.toml`
+- Create a dev account on Sepolia with `sncast account create --name <YOUR_NAME_ACCOUNT> --add-profile spiko-dev --url <STARKNET_SEPOLIA_RPC_URL>` - this will create a new profile in `snfoundry.toml`
+
 ## Introduction
 
 ### Overview of Smart Contracts
